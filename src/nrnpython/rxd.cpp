@@ -13,6 +13,7 @@
 
 #include <thread>
 #include <vector>
+#include <algorithm>
 #include "ocmatrix.h"
 #include "ivocvect.h"
 
@@ -1532,8 +1533,8 @@ struct ReactionMemoryContainer{
     int* ecsindex = NULL;
 
     int max_num_ecs_species = 0;
-    int max_num_ecs_parameters = 0;
-}
+    int max_num_ecs_params = 0;
+};
 
 
 
@@ -1557,7 +1558,7 @@ class SolveReactionMemory{
 
             prepare_memory(react);
 
-            results.max_num_num_species = workspace.max_num_num_species;
+            results.max_num_species = workspace.max_num_species;
             results.max_num_params = workspace.max_num_params;
             results.max_num_mult = workspace.max_num_mult;
             results.max_num_regions = workspace.max_num_regions;
@@ -1587,7 +1588,7 @@ class SolveReactionMemory{
             results.result_array_dx = workspace.result_array_dx;
             
             results.max_num_ecs_species = workspace.max_num_ecs_species;
-            results.max_num_ecs_parameters = workspace.max_num_ecs_parameters;
+            results.max_num_ecs_params = workspace.max_num_ecs_params;
 
             return results;
         }
@@ -1613,9 +1614,9 @@ class SolveReactionMemory{
         void reallocate_ics_memory(ICSReactions* react){
             free_ics_memory();
 
-            workspace.max_num_species = max(workspace.max_num_species, react->num_species);
-            workspace.max_num_params = max(workspace.max_num_params, react->num_params);
-            workspace.max_num_regions = max(workspace.max_num_regions, react->num_regions);
+            workspace.max_num_species = std::max(workspace.max_num_species, react->num_species);
+            workspace.max_num_params = std::max(workspace.max_num_params, react->num_params);
+            workspace.max_num_regions = std::max(workspace.max_num_regions, react->num_regions);
 
 
             // Rewrite this so that it ends up in a contiguous memory block?
@@ -1625,14 +1626,14 @@ class SolveReactionMemory{
             workspace.result_array = (double**) malloc(workspace.max_num_species * sizeof(double*));
             workspace.result_array_dx = (double**) malloc(workspace.max_num_species * sizeof(double*));
 
-            for (i = 0; i < workspace.max_num_species; i++) {
+            for (int i = 0; i < workspace.max_num_species; i++) {
                 workspace.states_for_reaction[i] = (double*) malloc(workspace.max_num_regions * sizeof(double));
                 workspace.states_for_reaction_dx[i] = (double*) malloc(workspace.max_num_regions * sizeof(double));
                 workspace.result_array[i] = (double*) malloc(workspace.max_num_regions * sizeof(double));
                 workspace.result_array_dx[i] = (double*) malloc(workspace.max_num_regions * sizeof(double));
             }
             
-            for (i = 0; i < workspace.max_num_params; i++){
+            for (int i = 0; i < workspace.max_num_params; i++){
                 workspace.params_for_reaction[i] = (double*) malloc(workspace.max_num_regions * sizeof(double));
             }
 
@@ -1641,8 +1642,8 @@ class SolveReactionMemory{
         void reallocate_ecs_memory(ICSReactions* react){
             free_mult_memory();
             
-            workspace.max_num_ecs_species = max(workspace.max_num_ecs_species, react->num_ecs_species);
-            workspace.max_num_ecs_params = max(workspace.max_num_ecs_params, react->num_ecs_params);
+            workspace.max_num_ecs_species = std::max(workspace.max_num_ecs_species, react->num_ecs_species);
+            workspace.max_num_ecs_params = std::max(workspace.max_num_ecs_params, react->num_ecs_params);
 
             if (workspace.max_num_ecs_species > 0) {
                 workspace.ecsindex = (int*) malloc(workspace.max_num_ecs_species * sizeof(int));
@@ -1653,7 +1654,7 @@ class SolveReactionMemory{
                 workspace.ecs_result_dx = (double*) malloc(workspace.max_num_ecs_species * sizeof(double));
             }
 
-            if (workspace.num_ecs_params > 0){
+            if (workspace.max_num_ecs_params > 0){
                 workspace.ecs_params_for_reaction = (double*) malloc(workspace.max_num_ecs_params * sizeof(double));
             }
 
@@ -1665,20 +1666,19 @@ class SolveReactionMemory{
         }
 
         void free_mult_memory(){
-            if (react->num_mult > 0){
-                free(workspace.mc_mult);
-            }
+            free(workspace.mc_mult);
+            workspace.mc_mult=NULL;
         }
 
         void free_ics_memory(){            
-            for (i = 0; i < num_species; i++) {
+            for (int i = 0; i < workspace.max_num_species; i++) {
                 free(workspace.states_for_reaction[i]);
                 free(workspace.states_for_reaction_dx[i]);
                 free(workspace.result_array[i]);
                 free(workspace.result_array_dx[i]);
             }
             
-            for (i = 0; i < num_params; i++){
+            for (int i = 0; i < workspace.max_num_params; i++){
                 free(workspace.params_for_reaction[i]);
             }
 
@@ -1687,23 +1687,35 @@ class SolveReactionMemory{
             free(workspace.params_for_reaction);
             free(workspace.result_array);
             free(workspace.result_array_dx);
+
+            workspace.states_for_reaction_dx = NULL;
+            workspace.states_for_reaction = NULL;
+            workspace.params_for_reaction = NULL;
+            workspace.result_array = NULL;
+            workspace.result_array_dx = NULL;
         }
 
         void free_ecs_memory(){
             free(workspace.ecsindex);
             
-            if (num_ecs_species > 0) {
+            if (workspace.max_num_ecs_species > 0) {
                 free(workspace.ecs_states_for_reaction);
                 free(workspace.ecs_states_for_reaction_dx);
                 free(workspace.ecs_result);
                 free(workspace.ecs_result_dx);
+
+                workspace.ecs_states_for_reaction = NULL;
+                workspace.ecs_states_for_reaction_dx = NULL;
+                workspace.ecs_result = NULL;
+                workspace.ecs_result_dx = NULL;
             }
 
-            if (react->num_ecs_params > 0){
+            if (workspace.max_num_ecs_params > 0){
                 free(workspace.ecs_params_for_reaction);
+                workspace.ecs_params_for_reaction = NULL;
             }
         }
-}
+};
 
 
 
@@ -1718,7 +1730,7 @@ void solve_reaction(ICSReactions* react,
                     double* cvode_b) {
     
     static SolveReactionMemory solve_reaction_workspace;
-    SolveReactionMemory ws = solve_reaction_workspace.get_memory(react);
+    ReactionMemoryContainer ws = solve_reaction_workspace.get_memory(react);
 
     int segment;
     int i, j, k, idx, jac_i, jac_j, jac_idx;
@@ -1747,10 +1759,10 @@ void solve_reaction(ICSReactions* react,
             for (j = 0; j < react->num_regions; j++) {
                 if (react->state_idx[segment][i][j] != SPECIES_ABSENT) {
                     ws.states_for_reaction[i][j] = states[react->state_idx[segment][i][j]];
-                    ws.states_for_reaction_dx[i][j] = states_for_reaction[i][j];
+                    ws.states_for_reaction_dx[i][j] = ws.states_for_reaction[i][j];
                 } else {
                     ws.states_for_reaction[i][j] = SPECIES_ABSENT;
-                    ws.states_for_reaction_dx[i][j] = states_for_reaction[i][j];
+                    ws.states_for_reaction_dx[i][j] = ws.states_for_reaction[i][j];
                 }
             }
 
@@ -1811,7 +1823,7 @@ void solve_reaction(ICSReactions* react,
             for (j = 0; j < react->num_regions; j++) {
                 if (react->state_idx[segment][i][j] != SPECIES_ABSENT) {
                     if (bval == NULL)
-                        b->elem(idx) = dt * result_array[i][j];
+                        b->elem(idx) = dt * ws.result_array[i][j];
                     else
                         b->elem(idx) = bval[react->state_idx[segment][i][j]];
 
@@ -1864,7 +1876,7 @@ void solve_reaction(ICSReactions* react,
         for (i = 0; i < react->num_ecs_species; i++) {
             if (react->ecs_state[segment][i] != NULL) {
                 if (bval == NULL)
-                    b->elem(idx) = dt * ecs_result[i];
+                    b->elem(idx) = dt * ws.ecs_result[i];
                 else
                     b->elem(idx) = cvode_b[react->ecs_index[segment][i]];
 
@@ -1925,7 +1937,7 @@ void solve_reaction(ICSReactions* react,
             }
             for (i = 0; i < react->num_ecs_species; i++) {
                 if (react->ecs_state[segment][i] != NULL)
-                    react->ecs_grid[i]->all_reaction_states[ecsindex[i]++] = x->elem(jac_idx++);
+                    react->ecs_grid[i]->all_reaction_states[ws.ecsindex[i]++] = x->elem(jac_idx++);
                 // cvode_b[react->ecs_index[segment][i]] = x->elem(jac_idx++);
             }
         } else  // fixed-step
@@ -1939,7 +1951,7 @@ void solve_reaction(ICSReactions* react,
             }
             for (i = 0; i < react->num_ecs_species; i++) {
                 if (react->ecs_state[segment][i] != NULL)
-                    react->ecs_grid[i]->all_reaction_states[ecsindex[i]++] = x->elem(jac_idx++);
+                    react->ecs_grid[i]->all_reaction_states[ws.ecsindex[i]++] = x->elem(jac_idx++);
             }
         }
     }
