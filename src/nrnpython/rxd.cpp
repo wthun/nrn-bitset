@@ -1,16 +1,3 @@
-// Alternativ:
-// - existerande försök men konvertera till double**
-// - malloc, men då med separat minneshantering, 
-//   kanske struct m. malloc som 
-//   NB: kolla vart free sker?
-//   
-//  - realloc eller dylikt?
-//  - Kanske börja med benchmarks?
-// 
-// 
-// 
-
-
 #include <../../nrnconf.h>
 #include <stdio.h>
 #include <assert.h>
@@ -26,7 +13,6 @@
 
 #include <thread>
 #include <vector>
-#include <algorithm>
 #include "ocmatrix.h"
 #include "ivocvect.h"
 
@@ -527,7 +513,7 @@ static void nrn_tree_solve(double* a,
         n      - number of states
     */
     long i, pin;
-    double* d = (double*) malloc(sizeof(double) * n); // SUSPECT!!! (a little bit)
+    double* d = (double*) malloc(sizeof(double) * n);
     double* myd;
     double* myc;
     double* mydbase;
@@ -1211,7 +1197,7 @@ extern "C" NRN_EXPORT int get_num_threads(void) {
 }
 
 
-void _fadvance(void) { // SUSPECT!!!
+void _fadvance(void) {
     double dt = *dt_ptr;
     long i;
     /*variables for diffusion*/
@@ -1519,175 +1505,11 @@ void get_reaction_rates(ICSReactions* react, double* states, double* rates, doub
     }
 }
 
-// maybe: have a struct holding simulation state?
-// 
-
-/*
-
-struct ReactionState {
-    std::vector<std::vector<double>> states_for_reaction;
-
-}
-
-
-DESIDERATA
- - Obtain maximum number of species and reactants and
-   reserve std::vector<...> memory for this in advance.
- - Hold vectors in a struct, ReactionState
- - Pass ReactionState by reference to solve_reaction 
-   and mutate accordingly.
- - ReactionState should handle memory acquisition and cleanup.
- - Ensure resetting? (No trailing variables... )
-
-
-
-*/
-
-
-
-/*
-
-struct ReactionStateMemory{ //kanske class med vissa metoder för initialisering
-    // Approach 1: Singleton object?
-    // Approach 2: Pass object to solve_reaction 
-
-    // ICS
-    std::vector<std::vector<double>> states_for_reaction;           // size: react->num_species
-    std::vector<std::vector<double>> states_for_reaction_dx;        // size: react->num_species
-    std::vector<std::vector<double>> params_for_reaction;           // size: react->num_params
-    std::vector<std::vector<double>> result_array;                  // size: react->num_species
-    std::vector<std::vector<double>> result_array_dx;               // size: react->num_species
-    // ? n_species x n_regions
-
-
-    // ECS
-    std::vector<std::vector<double>> ecs_states_for_reaction;       // size: react->num_ecs_species    
-    std::vector<std::vector<double>> ecs_states_for_reaction_dx;    // size: react->num_ecs_species   
-    std::vector<std::vector<double>> ecs_params_for_reaction;       // size: react->num_ecs_params   
-    std::vector<std::vector<double>> ecs_result;                    // size: react->num_ecs_species                
-    std::vector<std::vector<double>> ecs_result_dx;                 // size: react->num_ecs_species 
-
-    //?
-    std::vector<double> mc_mult; (NULL when react->num_mult <= 0; should be able to handle this)
-    std::vector<int> ecsindex;    // size: react->num_ecs_species
-
-    // method : estimate maximum reaction length
-
-
-
-}
-
-// std::matrix?
-
-
-*/
-
-class ReactionStateMemorySingleton{
-
-    protected:
-        ReactionStateMemorySingleton(): {}
-
-        static std::unique_ptr<ReactionStateMemorySingleton> instance_;
-
-
-
-
-    public:
-        ReactionStateMemorySingleton(ReactionStateMemorySingleton &other) = delete;
-        void operator=(const ReactionStateMemorySingleton &) = delete;
-        static ReactionStateMemorySingleton *GetInstance(const std::string& value);
-        
-        static const ReactionStateMemorySingleton& instance() {
-            if (instance_ == nullptr) {
-                instance_ = std::make_unique<ReactionStateMemorySingleton>
-            }
-            return instance_;
-        }
-
-        std::vector<std::vector<double>> states_for_reaction;           // size: react->num_species
-        std::vector<std::vector<double>> states_for_reaction_dx;        // size: react->num_species
-        std::vector<std::vector<double>> params_for_reaction;           // size: react->num_params
-        std::vector<std::vector<double>> result_array;                  // size: react->num_species
-        std::vector<std::vector<double>> result_array_dx;               // size: react->num_species
-        // ? n_species x n_regions
-
-        std::vector<double> mc_mult; //(NULL when react->num_mult <= 0; should be able to handle this)
-
-        // ECS
-        std::vector<std::vector<double>> ecs_states_for_reaction;       // size: react->num_ecs_species    
-        std::vector<std::vector<double>> ecs_states_for_reaction_dx;    // size: react->num_ecs_species   
-        std::vector<std::vector<double>> ecs_params_for_reaction;       // size: react->num_ecs_params   
-        std::vector<std::vector<double>> ecs_result;                    // size: react->num_ecs_species                
-        std::vector<std::vector<double>> ecs_result_dx;                 // size: react->num_ecs_species 
-
-        //?
-        
-        std::vector<int> ecsindex;    // size: react->num_ecs_species
-
-        void allocate_and_initialize(ICSReactions* react){
-            states_for_reaction.resize(react->num_species);
-            states_for_reaction_dx.resize(react->num_species);
-            params_for_reaction.resize(react->num_params);
-            result_array.resize(react->num_species);
-            result_array_dx.resize(react->num_species);
-
-            // !!!!! mc_mult. NULL???
-            if (react->num_mult > 0){
-                mc_mult.resize(react->num_mult)
-            }
-
-            if (react->num_ecs_species > 0){
-                ecsindex.resize(react->num_ecs_species);
-
-                for (i = 0; i < react->num_ecs_species; i++)
-                    ecsindex[i] = react->ecs_grid[i]->react_offsets[react->ecs_offset_index[i]];
-
-                ecs_states_for_reaction.resize(react->num_ecs_species);
-                ecs_states_for_reaction_dx.resize(react->num_ecs_species);
-                ecs_result.resize(react->num_ecs_species);
-                ecs_result_dx.resize(react->num_ecs_species);
-            }
-
-            if (react->num_ecs_params > 0)
-                ecs_params_for_reaction.resize(react->num_ecs_params);
-
-            for (i = 0; i < react->num_species; i++) {
-                states_for_reaction[i].resize(react->num_regions);
-                states_for_reaction_dx[i].resize(react->num_regions);
-                result_array[i].resize(react->num_regions);
-                result_array_dx[i].resize(react->num_regions);
-            }
-
-            for (i = 0; i < react->num_params; i++)
-                params_for_reaction[i].resize(react->num_regions);
-
-
-
-
-
-        }
-
-
-
-
-
-}
-
-std::unique_ptr<ReactionStateMemorySingleton> ReactionStateMemorySingleton::me = nullptr;
-
-
-
-
-
-
-void solve_reaction(ICSReactions* react, // primary SUSPECT!!! 
+void solve_reaction(ICSReactions* react,
                     double* states,
                     double* bval,
                     double* cvode_states,
                     double* cvode_b) {
-    
-    // ADD BENCHMARK HERE
-
     int segment;
     int i, j, k, idx, jac_i, jac_j, jac_idx;
     int N = react->icsN + react->ecsN; /*size of Jacobian (number species*regions for a segments)*/
@@ -1698,50 +1520,45 @@ void solve_reaction(ICSReactions* react, // primary SUSPECT!!!
     auto b = std::make_unique<IvocVect>(N);
     auto x = std::make_unique<IvocVect>(N);
 
-
-    // BEGIN ReactionStateMemorySingleton.allocate
-
-    ReactionStateMemorySingleton reaction_state_memory = ReactionStateMemorySingleton::instance();
-    reaction_state_memory.allocate_and_initialize(react);
-    //double** states_for_reaction = (double**) malloc(react->num_species * sizeof(double*));
-    //double** states_for_reaction_dx = (double**) malloc(react->num_species * sizeof(double*));
-    //double** params_for_reaction = (double**) malloc(react->num_params * sizeof(double*));
-    //double** result_array = (double**) malloc(react->num_species * sizeof(double*));
-    //double** result_array_dx = (double**) malloc(react->num_species * sizeof(double*));
+    double** states_for_reaction = (double**) malloc(react->num_species * sizeof(double*));
+    double** states_for_reaction_dx = (double**) malloc(react->num_species * sizeof(double*));
+    double** params_for_reaction = (double**) malloc(react->num_params * sizeof(double*));
+    double** result_array = (double**) malloc(react->num_species * sizeof(double*));
+    double** result_array_dx = (double**) malloc(react->num_species * sizeof(double*));
     double* mc_mult = NULL;
     if (react->num_mult > 0)
         mc_mult = (double*) malloc(react->num_mult * sizeof(double));
 
-    //double* ecs_states_for_reaction = NULL;
-    //double* ecs_states_for_reaction_dx = NULL;
-    //double* ecs_params_for_reaction = NULL;
-    //double* ecs_result = NULL;
-    //double* ecs_result_dx = NULL;
-    //double v = 0;
-    //int* ecsindex = NULL;
+    double* ecs_states_for_reaction = NULL;
+    double* ecs_states_for_reaction_dx = NULL;
+    double* ecs_params_for_reaction = NULL;
+    double* ecs_result = NULL;
+    double* ecs_result_dx = NULL;
+    double v = 0;
+    int* ecsindex = NULL;
 
-    //if (react->num_ecs_species > 0) {
-    //    ecsindex = (int*) malloc(react->num_ecs_species * sizeof(int));
-    //    for (i = 0; i < react->num_ecs_species; i++)
-    //        ecsindex[i] = react->ecs_grid[i]->react_offsets[react->ecs_offset_index[i]];
-    //    ecs_states_for_reaction = (double*) malloc(react->num_ecs_species * sizeof(double));
-    //    ecs_states_for_reaction_dx = (double*) malloc(react->num_ecs_species * sizeof(double));
-    //    ecs_result = (double*) malloc(react->num_ecs_species * sizeof(double));
-    //    ecs_result_dx = (double*) malloc(react->num_ecs_species * sizeof(double));
-    //} 
+    if (react->num_ecs_species > 0) {
+        ecsindex = (int*) malloc(react->num_ecs_species * sizeof(int));
+        for (i = 0; i < react->num_ecs_species; i++)
+            ecsindex[i] = react->ecs_grid[i]->react_offsets[react->ecs_offset_index[i]];
+        ecs_states_for_reaction = (double*) malloc(react->num_ecs_species * sizeof(double));
+        ecs_states_for_reaction_dx = (double*) malloc(react->num_ecs_species * sizeof(double));
+        ecs_result = (double*) malloc(react->num_ecs_species * sizeof(double));
+        ecs_result_dx = (double*) malloc(react->num_ecs_species * sizeof(double));
+    }
 
-    //if (react->num_ecs_params > 0)
-    //    ecs_params_for_reaction = (double*) malloc(react->num_ecs_params * sizeof(double));
+    if (react->num_ecs_params > 0)
+        ecs_params_for_reaction = (double*) malloc(react->num_ecs_params * sizeof(double));
 
 
-//    for (i = 0; i < react->num_species; i++) {
-//        states_for_reaction[i] = (double*) malloc(react->num_regions * sizeof(double));
-//        states_for_reaction_dx[i] = (double*) malloc(react->num_regions * sizeof(double));
-//        result_array[i] = (double*) malloc(react->num_regions * sizeof(double));
-//        result_array_dx[i] = (double*) malloc(react->num_regions * sizeof(double));
-//    }
-    //for (i = 0; i < react->num_params; i++)
-    //    params_for_reaction[i] = (double*) malloc(react->num_regions * sizeof(double));
+    for (i = 0; i < react->num_species; i++) {
+        states_for_reaction[i] = (double*) malloc(react->num_regions * sizeof(double));
+        states_for_reaction_dx[i] = (double*) malloc(react->num_regions * sizeof(double));
+        result_array[i] = (double*) malloc(react->num_regions * sizeof(double));
+        result_array_dx[i] = (double*) malloc(react->num_regions * sizeof(double));
+    }
+    for (i = 0; i < react->num_params; i++)
+        params_for_reaction[i] = (double*) malloc(react->num_regions * sizeof(double));
 
     for (segment = 0; segment < react->num_segments; segment++) {
         if (react->vptrs != NULL)
@@ -1750,22 +1567,22 @@ void solve_reaction(ICSReactions* react, // primary SUSPECT!!!
         for (i = 0; i < react->num_species; i++) {
             for (j = 0; j < react->num_regions; j++) {
                 if (react->state_idx[segment][i][j] != SPECIES_ABSENT) {
-                    reaction_state_memory.states_for_reaction[i][j] = states[react->state_idx[segment][i][j]];
-                    reaction_state_memory.states_for_reaction_dx[i][j] = states_for_reaction[i][j];
+                    states_for_reaction[i][j] = states[react->state_idx[segment][i][j]];
+                    states_for_reaction_dx[i][j] = states_for_reaction[i][j];
                 } else {
-                    reaction_state_memory.states_for_reaction[i][j] = SPECIES_ABSENT;
-                    reaction_state_memory.states_for_reaction_dx[i][j] = states_for_reaction[i][j];
+                    states_for_reaction[i][j] = SPECIES_ABSENT;
+                    states_for_reaction_dx[i][j] = states_for_reaction[i][j];
                 }
             }
-            std::fill(reaction_state_memory.result_array[i].begin(), reaction_state_memory.result_array[i].end(), 0);
-            std::fill(reaction_state_memory.result_array_dx[i].begin(), reaction_state_memory.result_array_dx[i].end(), 0);
+            memset(result_array[i], 0, react->num_regions * sizeof(double));
+            memset(result_array_dx[i], 0, react->num_regions * sizeof(double));
         }
         for (k = 0; i < react->num_species + react->num_params; i++, k++) {
             for (j = 0; j < react->num_regions; j++) {
                 if (react->state_idx[segment][i][j] != SPECIES_ABSENT) {
-                    reaction_state_memory.params_for_reaction[k][j] = states[react->state_idx[segment][i][j]];
+                    params_for_reaction[k][j] = states[react->state_idx[segment][i][j]];
                 } else {
-                    reaction_state_memory.params_for_reaction[k][j] = SPECIES_ABSENT;
+                    params_for_reaction[k][j] = SPECIES_ABSENT;
                 }
             }
         }
@@ -1774,36 +1591,35 @@ void solve_reaction(ICSReactions* react, // primary SUSPECT!!!
         for (i = 0; i < react->num_ecs_species; i++) {
             if (react->ecs_state[segment][i] != NULL) {
                 if (cvode_states != NULL) {
-                    reaction_state_memory.ecs_states_for_reaction[i] = cvode_states[react->ecs_index[segment][i]];
+                    ecs_states_for_reaction[i] = cvode_states[react->ecs_index[segment][i]];
                 } else {
-                    reaction_state_memory.ecs_states_for_reaction[i] = *(react->ecs_state[segment][i]); // assigning double* to std::vector
+                    ecs_states_for_reaction[i] = *(react->ecs_state[segment][i]);
                 }
-                reaction_state_memory.ecs_states_for_reaction_dx[i] = reaction_state_memory.ecs_states_for_reaction[i]; //like above
+                ecs_states_for_reaction_dx[i] = ecs_states_for_reaction[i];
             }
         }
         for (k = 0; i < react->num_ecs_species + react->num_ecs_params; i++, k++) {
             if (react->ecs_state[segment][i] != NULL) {
-                reaction_state_memory.ecs_params_for_reaction[k] = *(react->ecs_state[segment][i]);
+                ecs_params_for_reaction[k] = *(react->ecs_state[segment][i]);
             }
         }
 
         if (react->num_ecs_species > 0) {
-            std::fill(reaction_state_memory.ecs_result.begin(), reaction_state_memory.ecs_result.end(), 0);
-            std::fill(reaction_state_memory.ecs_result_dx.begin(), reaction_state_memory.ecs_result_dx.end(), 0);
+            memset(ecs_result, 0, react->num_ecs_species * sizeof(double));
+            memset(ecs_result_dx, 0, react->num_ecs_species * sizeof(double));
         }
 
-        for (i = 0; i < react->num_mult; i++) { // !!! TODO: Better alternative than separate flag?
+        for (i = 0; i < react->num_mult; i++) {
             mc_mult[i] = react->mc_multiplier[i][segment];
         }
 
-        // problem is here
-        react->reaction(reaction_state_memory.states_for_reaction,
-                        reaction_state_memory.params_for_reaction,
-                        reaction_state_memory.result_array,
-                        mc_mult,      // mc_mult can be NULL here... TODO: Update????
-                        reaction_state_memory.ecs_states_for_reaction,
-                        reaction_state_memory.ecs_params_for_reaction,
-                        reaction_state_memory.ecs_result,
+        react->reaction(states_for_reaction,
+                        params_for_reaction,
+                        result_array,
+                        mc_mult,
+                        ecs_states_for_reaction,
+                        ecs_params_for_reaction,
+                        ecs_result,
                         NULL,
                         v);
 
@@ -1818,18 +1634,18 @@ void solve_reaction(ICSReactions* react, // primary SUSPECT!!!
 
 
                     // set up the changed states array
-                    reaction_state_memory.states_for_reaction_dx[i][j] += dx;
+                    states_for_reaction_dx[i][j] += dx;
 
                     /* TODO: Handle approximating the Jacobian at a function upper
                      * limit, e.g. acos(1)
                      */
-                    react->reaction(reaction_state_memory.states_for_reaction_dx,
-                                    reaction_state_memory.params_for_reaction,
-                                    reaction_state_memory.result_array_dx,
+                    react->reaction(states_for_reaction_dx,
+                                    params_for_reaction,
+                                    result_array_dx,
                                     mc_mult,
-                                    reaction_state_memory.ecs_states_for_reaction,
-                                    reaction_state_memory.ecs_params_for_reaction,
-                                    reaction_state_memory.ecs_result_dx,
+                                    ecs_states_for_reaction,
+                                    ecs_params_for_reaction,
+                                    ecs_result_dx,
                                     NULL,
                                     v);
 
@@ -1837,25 +1653,25 @@ void solve_reaction(ICSReactions* react, // primary SUSPECT!!!
                         for (jac_j = 0; jac_j < react->num_regions; jac_j++) {
                             // pd is our Jacobian approximated
                             if (react->state_idx[segment][jac_i][jac_j] != SPECIES_ABSENT) {
-                                pd = (reaction_state_memory.result_array_dx[jac_i][jac_j] - reaction_state_memory.result_array[jac_i][jac_j]) /
+                                pd = (result_array_dx[jac_i][jac_j] - result_array[jac_i][jac_j]) /
                                      dx;
                                 *jacobian->mep(jac_idx, idx) = (idx == jac_idx) - dt * pd;
                                 jac_idx += 1;
                             }
-                            reaction_state_memory.result_array_dx[jac_i][jac_j] = 0;
+                            result_array_dx[jac_i][jac_j] = 0;
                         }
                     }
                     for (jac_i = 0; jac_i < react->num_ecs_species; jac_i++) {
                         // pd is our Jacobian approximated
                         if (react->ecs_state[segment][jac_i] != NULL) {
-                            pd = (reaction_state_memory.ecs_result_dx[jac_i] - reaction_state_memory.ecs_result[jac_i]) / dx;
+                            pd = (ecs_result_dx[jac_i] - ecs_result[jac_i]) / dx;
                             *jacobian->mep(jac_idx, idx) = -dt * pd;
                             jac_idx += 1;
                         }
-                        reaction_state_memory.ecs_result_dx[jac_i] = 0;
+                        ecs_result_dx[jac_i] = 0;
                     }
                     // reset dx array
-                    reaction_state_memory.states_for_reaction_dx[i][j] -= dx;
+                    states_for_reaction_dx[i][j] -= dx;
                     idx++;
                 }
             }
@@ -1865,24 +1681,24 @@ void solve_reaction(ICSReactions* react, // primary SUSPECT!!!
         for (i = 0; i < react->num_ecs_species; i++) {
             if (react->ecs_state[segment][i] != NULL) {
                 if (bval == NULL)
-                    b->elem(idx) = dt * reaction_state_memory.ecs_result[i];
+                    b->elem(idx) = dt * ecs_result[i];
                 else
                     b->elem(idx) = cvode_b[react->ecs_index[segment][i]];
 
 
                 // set up the changed states array
-                reaction_state_memory.ecs_states_for_reaction_dx[i] += dx;
+                ecs_states_for_reaction_dx[i] += dx;
 
                 /* TODO: Handle approximating the Jacobian at a function upper
                  * limit, e.g. acos(1)
                  */
-                react->reaction(reaction_state_memory.states_for_reaction,
-                                reaction_state_memory.params_for_reaction,
-                                reaction_state_memory.result_array_dx,
-                                mc_mult, // See above!
-                                reaction_state_memory.ecs_states_for_reaction_dx,
-                                reaction_state_memory.ecs_params_for_reaction,
-                                reaction_state_memory.ecs_result_dx,
+                react->reaction(states_for_reaction,
+                                params_for_reaction,
+                                result_array_dx,
+                                mc_mult,
+                                ecs_states_for_reaction_dx,
+                                ecs_params_for_reaction,
+                                ecs_result_dx,
                                 NULL,
                                 v);
 
@@ -1890,7 +1706,7 @@ void solve_reaction(ICSReactions* react, // primary SUSPECT!!!
                     for (jac_j = 0; jac_j < react->num_regions; jac_j++) {
                         // pd is our Jacobian approximated
                         if (react->state_idx[segment][jac_i][jac_j] != SPECIES_ABSENT) {
-                            pd = (reaction_state_memory.result_array_dx[jac_i][jac_j] - reaction_state_memory.result_array[jac_i][jac_j]) / dx;
+                            pd = (result_array_dx[jac_i][jac_j] - result_array[jac_i][jac_j]) / dx;
                             *jacobian->mep(jac_idx, idx) = -dt * pd;
                             jac_idx += 1;
                         }
@@ -1899,14 +1715,14 @@ void solve_reaction(ICSReactions* react, // primary SUSPECT!!!
                 for (jac_i = 0; jac_i < react->num_ecs_species; jac_i++) {
                     // pd is our Jacobian approximated
                     if (react->ecs_state[segment][jac_i] != NULL) {
-                        pd = (reaction_state_memory.ecs_result_dx[jac_i] - reaction_state_memory.ecs_result[jac_i]) / dx;
+                        pd = (ecs_result_dx[jac_i] - ecs_result[jac_i]) / dx;
                         *jacobian->mep(jac_idx, idx) = (idx == jac_idx) - dt * pd;
                         jac_idx += 1;
                     } else {
                         *jacobian->mep(idx, idx) = 1.0;
                     }
                     // reset dx array
-                    reaction_state_memory.ecs_states_for_reaction_dx[i] -= dx;
+                    ecs_states_for_reaction_dx[i] -= dx;
                 }
                 idx++;
             }
@@ -1944,30 +1760,30 @@ void solve_reaction(ICSReactions* react, // primary SUSPECT!!!
             }
         }
     }
-    //free(ecsindex);
-    //for (i = 0; i < react->num_species; i++) { 
-    //    free(states_for_reaction[i]);
-    //    free(states_for_reaction_dx[i]);
-    //    free(result_array[i]);
-    //    free(result_array_dx[i]);
-    //}
-    //for (i = 0; i < react->num_params; i++)
-    //    free(params_for_reaction[i]);
-    if (react->num_mult > 0) // TODO, see above!
+    free(ecsindex);
+    for (i = 0; i < react->num_species; i++) {
+        free(states_for_reaction[i]);
+        free(states_for_reaction_dx[i]);
+        free(result_array[i]);
+        free(result_array_dx[i]);
+    }
+    for (i = 0; i < react->num_params; i++)
+        free(params_for_reaction[i]);
+    if (react->num_mult > 0)
         free(mc_mult);
-    //free(states_for_reaction_dx);
-    //free(states_for_reaction);
-    //free(params_for_reaction);
-    //free(result_array);
-    //free(result_array_dx);
-    //if (react->num_ecs_species > 0) {
-    //    free(ecs_states_for_reaction);
-    //    free(ecs_states_for_reaction_dx);
-    //    free(ecs_result);
-    //    free(ecs_result_dx);
-    //}
-    //if (react->num_ecs_params > 0)
-    //    free(ecs_params_for_reaction);
+    free(states_for_reaction_dx);
+    free(states_for_reaction);
+    free(params_for_reaction);
+    free(result_array);
+    free(result_array_dx);
+    if (react->num_ecs_species > 0) {
+        free(ecs_states_for_reaction);
+        free(ecs_states_for_reaction_dx);
+        free(ecs_result);
+        free(ecs_result_dx);
+    }
+    if (react->num_ecs_params > 0)
+        free(ecs_params_for_reaction);
 }
 
 void do_ics_reactions(double* states, double* b, double* cvode_states, double* cvode_b) {
