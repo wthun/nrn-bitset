@@ -1617,6 +1617,8 @@ class SolveReactionMemory{
             workspace.max_num_params = max(workspace.max_num_params, react->num_params);
             workspace.max_num_regions = max(workspace.max_num_regions, react->num_regions);
 
+
+            // Rewrite this so that it ends up in a contiguous memory block?
             workspace.states_for_reaction = (double**) malloc(workspace.max_num_species * sizeof(double*));
             workspace.states_for_reaction_dx = (double**) malloc(workspace.max_num_species * sizeof(double*));
             workspace.params_for_reaction = (double**) malloc(workspace.max_num_params * sizeof(double*));
