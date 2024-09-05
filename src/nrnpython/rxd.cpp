@@ -1505,6 +1505,10 @@ void get_reaction_rates(ICSReactions* react, double* states, double* rates, doub
     }
 }
 
+
+
+
+
 void solve_reaction(ICSReactions* react,
                     double* states,
                     double* bval,
@@ -1516,7 +1520,10 @@ void solve_reaction(ICSReactions* react,
     double pd;
     double dt = *dt_ptr;
     double dx = FLT_EPSILON;
-    auto jacobian = std::make_unique<OcFullMatrix>(N, N);
+    
+    // auto jacobian = std::make_unique<OcFullMatrix>(N, N);
+    auto& jacobian = react->cached_jacobian; // alias for brevity
+
     auto b = std::make_unique<IvocVect>(N);
     auto x = std::make_unique<IvocVect>(N);
 
@@ -1623,27 +1630,98 @@ void solve_reaction(ICSReactions* react,
                         NULL,
                         v);
 
-        /*Calculate I - Jacobian for ICS reactions*/
-        for (i = 0, idx = 0; i < react->num_species; i++) {
-            for (j = 0; j < react->num_regions; j++) {
-                if (react->state_idx[segment][i][j] != SPECIES_ABSENT) {
+        bool STATE_CHANGED = true;
+
+        // Did these change?
+        // states_for_reaction
+        // params_for_reaction
+        // ecs_states_for_reaction
+        // ecs_params_for_reaction
+
+        // double** states_for_reaction = (double**) malloc(react->num_species * sizeof(double*));
+        // double** params_for_reaction = (double**) malloc(react->num_params * sizeof(double*));
+        // double* ecs_states_for_reaction = NULL;
+        // double* ecs_params_for_reaction = NULL;
+
+
+        if (!react->cached_jacobian || STATE_CHANGED) { // Should the jacobian be recalculated?
+            react->cached_jacobian = std::make_unique<OcFullMatrix>(N, N);
+            
+
+            /*Calculate I - Jacobian for ICS reactions*/
+            for (i = 0, idx = 0; i < react->num_species; i++) {
+                for (j = 0; j < react->num_regions; j++) {
+                    if (react->state_idx[segment][i][j] != SPECIES_ABSENT) {
+                        if (bval == NULL)
+                            b->elem(idx) = dt * result_array[i][j];
+                        else
+                            b->elem(idx) = bval[react->state_idx[segment][i][j]];
+
+
+                        // set up the changed states array
+                        states_for_reaction_dx[i][j] += dx;
+
+                        /* TODO: Handle approximating the Jacobian at a function upper
+                         * limit, e.g. acos(1)
+                         */
+                        react->reaction(states_for_reaction_dx,
+                                        params_for_reaction,
+                                        result_array_dx,
+                                        mc_mult,
+                                        ecs_states_for_reaction,
+                                        ecs_params_for_reaction,
+                                        ecs_result_dx,
+                                        NULL,
+                                        v);
+
+                        for (jac_i = 0, jac_idx = 0; jac_i < react->num_species; jac_i++) {
+                            for (jac_j = 0; jac_j < react->num_regions; jac_j++) {
+                                // pd is our Jacobian approximated
+                                if (react->state_idx[segment][jac_i][jac_j] != SPECIES_ABSENT) {
+                                    pd = (result_array_dx[jac_i][jac_j] - result_array[jac_i][jac_j]) /
+                                         dx;
+                                    *jacobian->mep(jac_idx, idx) = (idx == jac_idx) - dt * pd;
+                                    jac_idx += 1;
+                                }
+                                result_array_dx[jac_i][jac_j] = 0;
+                            }
+                        }
+                        for (jac_i = 0; jac_i < react->num_ecs_species; jac_i++) {
+                            // pd is our Jacobian approximated
+                            if (react->ecs_state[segment][jac_i] != NULL) {
+                                pd = (ecs_result_dx[jac_i] - ecs_result[jac_i]) / dx;
+                                *jacobian->mep(jac_idx, idx) = -dt * pd;
+                                jac_idx += 1;
+                            }
+                            ecs_result_dx[jac_i] = 0;
+                        }
+                        // reset dx array
+                        states_for_reaction_dx[i][j] -= dx;
+                        idx++;
+                    }
+                }
+            }
+
+            /*Calculate I - Jacobian for MultiCompartment ECS reactions*/
+            for (i = 0; i < react->num_ecs_species; i++) {
+                if (react->ecs_state[segment][i] != NULL) {
                     if (bval == NULL)
-                        b->elem(idx) = dt * result_array[i][j];
+                        b->elem(idx) = dt * ecs_result[i];
                     else
-                        b->elem(idx) = bval[react->state_idx[segment][i][j]];
+                        b->elem(idx) = cvode_b[react->ecs_index[segment][i]];
 
 
                     // set up the changed states array
-                    states_for_reaction_dx[i][j] += dx;
+                    ecs_states_for_reaction_dx[i] += dx;
 
                     /* TODO: Handle approximating the Jacobian at a function upper
                      * limit, e.g. acos(1)
                      */
-                    react->reaction(states_for_reaction_dx,
+                    react->reaction(states_for_reaction,
                                     params_for_reaction,
                                     result_array_dx,
                                     mc_mult,
-                                    ecs_states_for_reaction,
+                                    ecs_states_for_reaction_dx,
                                     ecs_params_for_reaction,
                                     ecs_result_dx,
                                     NULL,
@@ -1653,83 +1731,41 @@ void solve_reaction(ICSReactions* react,
                         for (jac_j = 0; jac_j < react->num_regions; jac_j++) {
                             // pd is our Jacobian approximated
                             if (react->state_idx[segment][jac_i][jac_j] != SPECIES_ABSENT) {
-                                pd = (result_array_dx[jac_i][jac_j] - result_array[jac_i][jac_j]) /
-                                     dx;
-                                *jacobian->mep(jac_idx, idx) = (idx == jac_idx) - dt * pd;
+                                pd = (result_array_dx[jac_i][jac_j] - result_array[jac_i][jac_j]) / dx;
+                                *jacobian->mep(jac_idx, idx) = -dt * pd;
                                 jac_idx += 1;
                             }
-                            result_array_dx[jac_i][jac_j] = 0;
                         }
                     }
                     for (jac_i = 0; jac_i < react->num_ecs_species; jac_i++) {
                         // pd is our Jacobian approximated
                         if (react->ecs_state[segment][jac_i] != NULL) {
                             pd = (ecs_result_dx[jac_i] - ecs_result[jac_i]) / dx;
-                            *jacobian->mep(jac_idx, idx) = -dt * pd;
+                            *jacobian->mep(jac_idx, idx) = (idx == jac_idx) - dt * pd;
                             jac_idx += 1;
+                        } else {
+                            *jacobian->mep(idx, idx) = 1.0;
                         }
-                        ecs_result_dx[jac_i] = 0;
+                        // reset dx array
+                        ecs_states_for_reaction_dx[i] -= dx;
                     }
-                    // reset dx array
-                    states_for_reaction_dx[i][j] -= dx;
                     idx++;
                 }
             }
+
+            // solve for x, destructively
+            jacobian->solv(b.get(), x.get(), false);
+        } else {
+
+            // solve for x, destructively
+            jacobian->solv(b.get(), x.get(), true);
         }
-
-        /*Calculate I - Jacobian for MultiCompartment ECS reactions*/
-        for (i = 0; i < react->num_ecs_species; i++) {
-            if (react->ecs_state[segment][i] != NULL) {
-                if (bval == NULL)
-                    b->elem(idx) = dt * ecs_result[i];
-                else
-                    b->elem(idx) = cvode_b[react->ecs_index[segment][i]];
+        
+        
 
 
-                // set up the changed states array
-                ecs_states_for_reaction_dx[i] += dx;
 
-                /* TODO: Handle approximating the Jacobian at a function upper
-                 * limit, e.g. acos(1)
-                 */
-                react->reaction(states_for_reaction,
-                                params_for_reaction,
-                                result_array_dx,
-                                mc_mult,
-                                ecs_states_for_reaction_dx,
-                                ecs_params_for_reaction,
-                                ecs_result_dx,
-                                NULL,
-                                v);
-
-                for (jac_i = 0, jac_idx = 0; jac_i < react->num_species; jac_i++) {
-                    for (jac_j = 0; jac_j < react->num_regions; jac_j++) {
-                        // pd is our Jacobian approximated
-                        if (react->state_idx[segment][jac_i][jac_j] != SPECIES_ABSENT) {
-                            pd = (result_array_dx[jac_i][jac_j] - result_array[jac_i][jac_j]) / dx;
-                            *jacobian->mep(jac_idx, idx) = -dt * pd;
-                            jac_idx += 1;
-                        }
-                    }
-                }
-                for (jac_i = 0; jac_i < react->num_ecs_species; jac_i++) {
-                    // pd is our Jacobian approximated
-                    if (react->ecs_state[segment][jac_i] != NULL) {
-                        pd = (ecs_result_dx[jac_i] - ecs_result[jac_i]) / dx;
-                        *jacobian->mep(jac_idx, idx) = (idx == jac_idx) - dt * pd;
-                        jac_idx += 1;
-                    } else {
-                        *jacobian->mep(idx, idx) = 1.0;
-                    }
-                    // reset dx array
-                    ecs_states_for_reaction_dx[i] -= dx;
-                }
-                idx++;
-            }
-        }
-        // solve for x, destructively
-        jacobian->solv(b.get(), x.get(), false);
-
+        // update states
         if (bval != NULL)  // variable-step
         {
             for (i = 0, jac_idx = 0; i < react->num_species; i++) {
@@ -1760,6 +1796,8 @@ void solve_reaction(ICSReactions* react,
             }
         }
     }
+
+    // free memory that was allocated in here
     free(ecsindex);
     for (i = 0; i < react->num_species; i++) {
         free(states_for_reaction[i]);

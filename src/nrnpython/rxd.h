@@ -4,6 +4,8 @@
 #include <thread>
 #include <vector>
 
+#include "ocmatrix.h"
+
 #define SPECIES_ABSENT -1
 #define PREFETCH       4
 
@@ -63,7 +65,136 @@ typedef struct ICSReactions {
     int* mc_flux_idx;
     double** vptrs;
     struct ICSReactions* next;
+
+    // cache lower-upper decomposition and
+    // old_state (?) to check for updates.
+    // also track cache hits and misses
+    std::unique_ptr<OcFullMatrix> cached_jacobian = nullptr;
+    //std::unique_ptr<double*> cached_state = nullptr;
+
+    std::unique_ptr<double[][]> = nullptr;
+
+
 } ICSReactions;
+
+struct ReactionStateCache {
+    bool allocated = false;
+
+    double **states_for_reaction = NULL;
+    double **params_for_reaction = NULL;
+    double *ecs_states_for_reaction = NULL;
+    double *ecs_params_for_reaction = NULL;
+
+    int num_params = 0;
+    int num_species = 0;
+
+    int num_ecs_params = 0;
+    int num_ecs_species = 0;
+
+    int num_regions = 0;
+
+    void allocate(ICSReactions *react) {
+      free_cache();
+
+      num_params = react->num_params;
+      num_species = react->num_species;
+      num_ecs_params = react->num_ecs_params;
+      num_ecs_params = react->num_ecs_params;
+      num_regions = react->num_regions;
+
+      // NB: can malloc(0) occur here? (Implementation defined behavior)
+      states_for_reaction = (double **)malloc(num_species * sizeof(double *));
+      for (int i = 0; i < num_species; i++) {
+        states_for_reaction[i] = (double *)malloc(num_regions * sizeof(double));
+      }
+
+      params_for_reaction = (double **)malloc(num_params * sizeof(double *));
+      for (int i = 0; i < num_params; i++) {
+        params_for_reaction[i] = (double *)malloc(num_regions * sizeof(double));
+      }
+
+      if (num_ecs_species > 0) {
+        ecs_states_for_reaction =
+            (double *)malloc(num_ecs_species * sizeof(double));
+      } else {
+        free(ecs_states_for_reaction);
+        ecs_states_for_reaction = NULL;
+      }
+
+      if (num_ecs_params > 0) {
+        ecs_params_for_reaction =
+            (double *)malloc(num_ecs_params * sizeof(double));
+      } else {
+        free(ecs_params_for_reaction);
+        ecs_params_for_reaction = NULL;
+      }
+
+      allocated = true;
+    }
+
+    void save(double **states_for_reaction, double **params_for_reaction,
+              double *ecs_states_for_reaction,
+              double *ecs_params_for_reaction) {
+
+        for (int i = 0; i < num_species; i++) {
+            memcpy(this->states_for_reaction[i], states_for_reaction[i],
+                   num_regions * sizeof(double));
+        }
+        for (int i = 0; i < num_species; i++) {
+            memcpy(this->params_for_reaction[i], params_for_reaction[i],
+                   num_regions * sizeof(double));
+        }
+
+        if (num_ecs_species > 0) {
+            memcpy(this->ecs_states_for_reaction, ecs_states_for_reaction,
+                   num_ecs_species * sizeof(double));
+        }
+
+        if (num_ecs_params > 0) {
+            memcpy(this->ecs_params_for_reaction, ecs_params_for_reaction,
+                   num_ecs_params * sizeof(double));
+        }
+    }
+
+    bool state_changed(ICSReactions * react){        
+        if(!allocated)
+            return true;
+
+        // continue on Monday
+        // check if the states have changed, 
+
+        // change to contiguous memory allocation?
+
+
+    }
+
+    void free_cache(){
+        for (int i=0; i < num_species; i++){
+            free(states_for_reaction[i]);
+        }
+        free(states_for_reaction);
+
+        for (int i=0; i < num_params; i++){
+            free(params_for_reaction[i]);
+        }
+        free(params_for_reaction);
+
+        free(ecs_states_for_reaction);
+        free(ecs_params_for_reaction);
+
+        states_for_reaction = NULL;
+        params_for_reaction = NULL;
+        ecs_states_for_reaction = NULL;
+        ecs_params_for_reaction = NULL;
+
+        allocated = false;
+
+    }
+
+    ~ReactionStateCache(){
+        free_cache();
+    }
+};
 
 typedef struct TaskList {
     void* (*task)(void*);
