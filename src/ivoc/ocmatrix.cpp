@@ -12,6 +12,9 @@
 
 #include "ocmatrix.h"
 
+#include "utils/profile/profiler_interface.h"
+
+
 int nrn_matrix_dim(void* vm, int d) {
     OcMatrix* m = (OcMatrix*) vm;
     return d ? m->ncol() : m->nrow();
@@ -217,13 +220,25 @@ void OcFullMatrix::inverse(Matrix* out) {
     out->full()->m_ = m_.inverse();
 }
 
+  
 void OcFullMatrix::solv(Vect* in, Vect* out, bool use_lu) {
+
     if (!lu_ || !use_lu || lu_->rows() != m_.rows()) {
-        lu_ = std::make_unique<Eigen::FullPivLU<decltype(m_)>>(m_);
+      nrn::Instrumentor::phase_begin("OcFullMatrix_prepare");
+      lu_ = std::make_unique<Eigen::FullPivLU<decltype(m_)>>(m_);
+      nrn::Instrumentor::phase_end("OcFullMatrix_prepare");
     }
+
+    nrn::Instrumentor::phase_begin("OcFullMatrix_auto");
+    
     auto v1 = Vect2VEC(in);
     auto v2 = Vect2VEC(out);
+
+    nrn::Instrumentor::phase_end("OcFullMatrix_auto");
+
+    nrn::Instrumentor::phase_begin("OcFullMatrix_solve");
     v2 = lu_->solve(v1);
+    nrn::Instrumentor::phase_end("OcFullMatrix_solve");
 }
 
 double OcFullMatrix::det(int* e) {
@@ -279,13 +294,30 @@ void OcSparseMatrix::mulv(Vect* vin, Vect* vout) {
 }
 
 void OcSparseMatrix::solv(Vect* in, Vect* out, bool use_lu) {
+
+    nrn::Instrumentor::phase_begin("OcSparseMatrix_prepare");
+  
     if (!lu_ || !use_lu || lu_->rows() != m_.rows()) {
+
+        nrn::Instrumentor::phase_begin("OcSparseMatrix_prep_inner1");
         m_.makeCompressed();
+        nrn::Instrumentor::phase_end("OcSparseMatrix_prep_inner1");
+	
+	nrn::Instrumentor::phase_begin("OcSparseMatrix_prep_inner2");
         lu_ = std::make_unique<Eigen::SparseLU<decltype(m_)>>(m_);
+        nrn::Instrumentor::phase_end("OcSparseMatrix_prep_inner2");
+	
     }
     auto v1 = Vect2VEC(in);
     auto v2 = Vect2VEC(out);
+
+    nrn::Instrumentor::phase_end("OcSparseMatrix_prepare");
+
+    nrn::Instrumentor::phase_begin("OcSparseMatrix_solve");
+
     v2 = lu_->solve(v1);
+
+    nrn::Instrumentor::phase_end("OcSparseMatrix_solve");
 }
 
 void OcSparseMatrix::setrow(int k, Vect* in) {

@@ -11,6 +11,14 @@
 #include "nrnwrap_Python.h"
 #include "nrnpython.h"
 
+#include "utils/profile/profiler_interface.h"
+#include <caliper/cali.h>
+
+#include <iostream>
+#ifndef NRN_CALIPER
+std::cout << "   !!! HELLO MISSING --  CALIPER!" << std::endl;
+#endif
+
 #include <thread>
 #include <vector>
 #include <algorithm>
@@ -1612,6 +1620,9 @@ class SolveReactionMemory{
         }
 
         void reallocate_ics_memory(ICSReactions* react){
+
+	  std::cout << "reallocate_ics_memory \n";
+	  
             free_ics_memory();
 
             workspace.max_num_species = std::max(workspace.max_num_species, react->num_species);
@@ -1728,7 +1739,9 @@ void solve_reaction(ICSReactions* react,
                     double* bval,
                     double* cvode_states,
                     double* cvode_b) {
-    
+
+    nrn::Instrumentor::phase_begin("solve_reaction");
+  
     static SolveReactionMemory solve_reaction_workspace;
     ReactionMemoryContainer ws = solve_reaction_workspace.get_memory(react);
 
@@ -1739,9 +1752,13 @@ void solve_reaction(ICSReactions* react,
     double dt = *dt_ptr;
     double dx = FLT_EPSILON;
     auto jacobian = std::make_unique<OcFullMatrix>(N, N);
+    // auto jacobian = std::make_unique<OcSparseMatrix>(N, N);    
     auto b = std::make_unique<IvocVect>(N);
     auto x = std::make_unique<IvocVect>(N);
 
+    //std::cout << "-- size of jacobian = " << N << "\n";
+    //std::cout << "-- react->num_segments = " << react->num_segments << "\n";
+    
     double v = 0;
 
     if (react->num_ecs_species > 0) {
@@ -1754,6 +1771,9 @@ void solve_reaction(ICSReactions* react,
         if (react->vptrs != NULL)
             v = *(react->vptrs[segment]);
 
+	nrn::Instrumentor::phase_begin("ICS_init");
+
+	
         // ICS
         for (i = 0; i < react->num_species; i++) {
             for (j = 0; j < react->num_regions; j++) {
@@ -1780,6 +1800,10 @@ void solve_reaction(ICSReactions* react,
         }
 
 
+	nrn::Instrumentor::phase_end("ICS_init");
+
+	nrn::Instrumentor::phase_begin("ECS_init");
+	
         // ECS
         for (i = 0; i < react->num_ecs_species; i++) {
             if (react->ecs_state[segment][i] != NULL) {
@@ -1806,7 +1830,11 @@ void solve_reaction(ICSReactions* react,
             ws.mc_mult[i] = react->mc_multiplier[i][segment];
         }
 
+	nrn::Instrumentor::phase_end("ECS_init");
+	
 
+	nrn::Instrumentor::phase_begin("React_create");
+	
         // Create reaction to calculation
         react->reaction(ws.states_for_reaction,
                         ws.params_for_reaction,
@@ -1818,6 +1846,10 @@ void solve_reaction(ICSReactions* react,
                         NULL,
                         v);
 
+	nrn::Instrumentor::phase_end("React_create");
+
+	nrn::Instrumentor::phase_begin("ICS_Jacobian");
+	
         /*Calculate I - Jacobian for ICS reactions*/
         for (i = 0, idx = 0; i < react->num_species; i++) {
             for (j = 0; j < react->num_regions; j++) {
@@ -1872,6 +1904,10 @@ void solve_reaction(ICSReactions* react,
             }
         }
 
+	nrn::Instrumentor::phase_end("ICS_Jacobian");
+
+	nrn::Instrumentor::phase_begin("ECS_Jacobian");
+	
         /*Calculate I - Jacobian for MultiCompartment ECS reactions*/
         for (i = 0; i < react->num_ecs_species; i++) {
             if (react->ecs_state[segment][i] != NULL) {
@@ -1922,9 +1958,20 @@ void solve_reaction(ICSReactions* react,
                 idx++;
             }
         }
+
+	nrn::Instrumentor::phase_end("ECS_Jacobian");
+
+	nrn::Instrumentor::phase_begin("Solve_Jacobian");
         // solve for x, destructively
         jacobian->solv(b.get(), x.get(), false);
+	// jacobian->solv(b.get(), x.get(), true);
 
+	// jacobian->mulv(b.get(), x.get());  // Unstable
+	
+	nrn::Instrumentor::phase_end("Solve_Jacobian");
+
+	nrn::Instrumentor::phase_begin("Solve_grid");
+	
         if (bval != NULL)  // variable-step
         {
             for (i = 0, jac_idx = 0; i < react->num_species; i++) {
@@ -1954,7 +2001,11 @@ void solve_reaction(ICSReactions* react,
                     react->ecs_grid[i]->all_reaction_states[ws.ecsindex[i]++] = x->elem(jac_idx++);
             }
         }
+
+	nrn::Instrumentor::phase_end("Solve_grid");
     }
+
+    nrn::Instrumentor::phase_end("solve_reaction");    
 }
 
 void do_ics_reactions(double* states, double* b, double* cvode_states, double* cvode_b) {
