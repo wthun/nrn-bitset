@@ -112,7 +112,7 @@ class ReactionStateCache {
                            double *new_ecs_params_for_reaction) {
             std::cout << "state_changed " << std::endl;
 
-            bool state_changed = false;
+            bool _state_changed = false;
 
             if(!is_allocated){
                 std::cout << "Not allocated... returning true" << std::endl;
@@ -121,8 +121,8 @@ class ReactionStateCache {
 
             // check if (ICS) species states have changed
             std::cout << "check ICS species" << std::endl;
-            for (int i = 0; !state_changed && i < num_species; i++) {
-                for (int j = 0; !state_changed && j < num_regions; j++) {
+            for (int i = 0; !_state_changed && i < num_species; i++) {
+                for (int j = 0; !_state_changed && j < num_regions; j++) {
 
                   if (states_for_reaction[i][j] > 0) {
                     double delta = std::abs((states_for_reaction[i][j] -
@@ -130,11 +130,11 @@ class ReactionStateCache {
                                             states_for_reaction[i][j]);
 
                     if (delta > delta_threshold) {
-                        state_changed = true;
+                        _state_changed = true;
                     }
 
                   } else if (new_states_for_reaction[i][j] > 0) {
-                    state_changed = true;
+                    _state_changed = true;
                     // todo: deal with negative values?
                     // (e.g. if new species are added after simulation)
                   }
@@ -143,56 +143,56 @@ class ReactionStateCache {
 
             // check if (ICS) parameters changed
             std::cout << "check ICS parameters" << std::endl;
-            for (int i = 0; !state_changed && i < num_params; i++) {
-                for (int j = 0; !state_changed && j < num_regions; j++) {
+            for (int i = 0; !_state_changed && i < num_params; i++) {
+                for (int j = 0; !_state_changed && j < num_regions; j++) {
                   if (params_for_reaction[i][j] != 0) {
                     double delta = std::abs((params_for_reaction[i][j] -
                                              new_params_for_reaction[i][j]) /
                                             params_for_reaction[i][j]);
                     if (delta > delta_threshold) {
-                      state_changed = true;
+                      _state_changed = true;
                     }
 
                   } else if (params_for_reaction[i][j] !=
                              new_params_for_reaction[i][j]) {
-                    state_changed = true;
+                    _state_changed = true;
                   }
                 }
             }
 
             // check if ECS species changed
             std::cout << "check ECS species" << std::endl;
-            for (int i = 0; !state_changed && i < num_ecs_species; i++) {
+            for (int i = 0; !_state_changed && i < num_ecs_species; i++) {
                 if (ecs_states_for_reaction[i] > 0) {
                   double delta = std::abs((ecs_states_for_reaction[i] -
                                            new_ecs_states_for_reaction[i]) /
                                           ecs_states_for_reaction[i]);
                   if (delta > delta_threshold) {
-                    state_changed = true;
+                    _state_changed = true;
                   }
                 } else if (ecs_states_for_reaction[i] !=
                            new_ecs_states_for_reaction[i]) {
-                    state_changed = true;           
+                    _state_changed = true;           
                 }
             }
 
             // check if ECS params changed
             std::cout << "check ECS parameters" << std::endl;
-            for (int i = 0; !state_changed && i < num_ecs_params; i++) {
+            for (int i = 0; !_state_changed && i < num_ecs_params; i++) {
                 if (ecs_params_for_reaction[i] != 0) {
                     double delta = std::abs((ecs_params_for_reaction[i] -
                                              new_ecs_params_for_reaction[i]) /
                                             ecs_params_for_reaction[i]);
                     if (delta > delta_threshold) {
-                        state_changed = true;
+                        _state_changed = true;
                     }
                 } else if (ecs_params_for_reaction[i] != new_ecs_params_for_reaction[i]) {
-                    state_changed = true;
+                    _state_changed = true;
                 }
             }
 
             // count cache misses
-            if (state_changed){
+            if (_state_changed){
                 cache_misses++;
             } else {
                 cache_hits++;
@@ -206,7 +206,7 @@ class ReactionStateCache {
 
             is_assigned = true;
 
-            return state_changed;
+            return _state_changed;
             // continue on Monday
             // check if the states have changed, 
 
