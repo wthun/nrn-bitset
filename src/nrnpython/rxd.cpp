@@ -1511,9 +1511,16 @@ void ReactionStateCache::allocate(ICSReactions *react) {
     std::cout << "allocate" << std::endl;
     free_cache();
 
+    std::cout << "ICSReactions holds: " << std::endl;
+    std::cout << "\tnum_params = " << react->num_params << std::endl;
+    std::cout << "\tnum_species = " << react->num_species << std::endl;
+    std::cout << "\tnum_ecs_params = " << react->num_ecs_params << std::endl;
+    std::cout << "\tnum_ecs_params = " << react->num_ecs_params << std::endl;
+    std::cout << "\tnum_regions = " << react->num_regions << std::endl;
+
     num_params = react->num_params;
     num_species = react->num_species;
-    num_ecs_params = react->num_ecs_params;
+    num_ecs_species = react->num_ecs_species;
     num_ecs_params = react->num_ecs_params;
     num_regions = react->num_regions;
 
