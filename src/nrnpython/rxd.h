@@ -49,14 +49,14 @@ class ICSReactions; // forward declaration
 class ReactionStateCache {
 
     public:
-        ReactionStateCache(){
-            std::cout << "At initialization, cache holds: " << std::endl;
-            std::cout << "\tnum_params = " << num_params << std::endl;
-            std::cout << "\tnum_species = " << num_species << std::endl;
-            std::cout << "\tnum_ecs_params = " << num_ecs_params << std::endl;
-            std::cout << "\tnum_ecs_params = " << num_ecs_params << std::endl;
-            std::cout << "\tnum_regions = " << num_regions << std::endl;
-        }
+        //ReactionStateCache(){
+        //    std::cout << "At initialization, cache holds: " << std::endl;
+        //    std::cout << "\tnum_params = " << num_params << std::endl;
+        //    std::cout << "\tnum_species = " << num_species << std::endl;
+        //    std::cout << "\tnum_ecs_params = " << num_ecs_params << std::endl;
+        //    std::cout << "\tnum_ecs_params = " << num_ecs_params << std::endl;
+        //    std::cout << "\tnum_regions = " << num_regions << std::endl;
+        //}
         bool is_allocated = false;
         bool is_assigned = false;
 
@@ -114,8 +114,10 @@ class ReactionStateCache {
 
             bool state_changed = false;
 
-            if(!is_allocated)
+            if(!is_allocated){
+                std::cout << "Not allocated... returning true" << std::endl;
                 return true;
+            }
 
             // check if (ICS) species states have changed
             std::cout << "check ICS species" << std::endl;
