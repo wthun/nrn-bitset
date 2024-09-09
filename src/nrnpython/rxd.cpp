@@ -1508,6 +1508,7 @@ void get_reaction_rates(ICSReactions* react, double* states, double* rates, doub
 }
 
 void ReactionStateCache::allocate(ICSReactions *react) {
+    std::cout << "check state cache" << std::endl;
     free_cache();
 
     num_params = react->num_params;
@@ -1544,6 +1545,14 @@ void ReactionStateCache::allocate(ICSReactions *react) {
     }
 
     is_allocated = true;
+
+    std::cout << "cache size: " << std::endl;
+    std::cout << "\tnum_params = " << num_params << std::endl;
+    std::cout << "\tnum_species = " << num_species << std::endl;
+    std::cout << "\tnum_ecs_params = " << num_ecs_params << std::endl;
+    std::cout << "\tnum_ecs_params = " << num_ecs_params << std::endl;
+    std::cout << "\tnum_regions = " << num_regions << std::endl;
+    
 }
 
 void solve_reaction(ICSReactions* react,

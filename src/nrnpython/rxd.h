@@ -76,6 +76,7 @@ class ReactionStateCache {
         void save_state(double **states_for_reaction, double **params_for_reaction,
                         double *ecs_states_for_reaction,
                         double *ecs_params_for_reaction) {
+            std::cout << "save_state " << std::endl;
 
           for (int i = 0; i < num_species; i++) {
             memcpy(this->states_for_reaction[i], states_for_reaction[i],
@@ -101,13 +102,15 @@ class ReactionStateCache {
                            double **new_params_for_reaction,
                            double *new_ecs_states_for_reaction,
                            double *new_ecs_params_for_reaction) {
-            
+            std::cout << "state_changed " << std::endl;
+
             bool state_changed = false;
 
             if(!is_allocated)
                 return true;
 
             // check if (ICS) species states have changed
+            std::cout << "check ICS species" << std::endl;
             for (int i = 0; !state_changed && i < num_species; i++) {
                 for (int j = 0; !state_changed && j < num_regions; j++) {
 
@@ -129,6 +132,7 @@ class ReactionStateCache {
             }
 
             // check if (ICS) parameters changed
+            std::cout << "check ICS parameters" << std::endl;
             for (int i = 0; !state_changed && i < num_params; i++) {
                 for (int j = 0; !state_changed && j < num_regions; j++) {
                   if (params_for_reaction[i][j] != 0) {
@@ -147,6 +151,7 @@ class ReactionStateCache {
             }
 
             // check if ECS species changed
+            std::cout << "check ECS species" << std::endl;
             for (int i = 0; !state_changed && i < num_ecs_species; i++) {
                 if (ecs_states_for_reaction[i] > 0) {
                   double delta = std::abs((ecs_states_for_reaction[i] -
@@ -162,6 +167,7 @@ class ReactionStateCache {
             }
 
             // check if ECS params changed
+            std::cout << "check ECS parameters" << std::endl;
             for (int i = 0; !state_changed && i < num_ecs_params; i++) {
                 if (ecs_params_for_reaction[i] != 0) {
                     double delta = std::abs((ecs_params_for_reaction[i] -
