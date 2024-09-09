@@ -1507,22 +1507,17 @@ void get_reaction_rates(ICSReactions* react, double* states, double* rates, doub
     }
 }
 
-void ReactionStateCache::allocate(ICSReactions *react) {
+// num_params = react->num_params;
+//  num_species = react->num_species;
+//  num_ecs_species = react->num_ecs_species;
+//  num_ecs_params = react->num_ecs_params;
+//  num_regions = react->num_regions;
+
+void ReactionStateCache::allocate(int num_params, int num_species,
+                                  int num_ecs_species, int num_ecs_params,
+                                  int num_regions) {
     std::cout << "allocate" << std::endl;
     free_cache();
-
-    std::cout << "ICSReactions holds: " << std::endl;
-    std::cout << "\tnum_params = " << react->num_params << std::endl;
-    std::cout << "\tnum_species = " << react->num_species << std::endl;
-    std::cout << "\tnum_ecs_params = " << react->num_ecs_params << std::endl;
-    std::cout << "\tnum_ecs_params = " << react->num_ecs_params << std::endl;
-    std::cout << "\tnum_regions = " << react->num_regions << std::endl;
-
-    num_params = react->num_params;
-    num_species = react->num_species;
-    num_ecs_species = react->num_ecs_species;
-    num_ecs_params = react->num_ecs_params;
-    num_regions = react->num_regions;
 
     std::cout << "new cache size: " << std::endl;
     std::cout << "\tnum_params = " << num_params << std::endl;
@@ -1562,8 +1557,6 @@ void ReactionStateCache::allocate(ICSReactions *react) {
 
     is_allocated = true;
     std::cout << "allocate -- end" << std::endl;
-    
-    
 }
 
 void solve_reaction(ICSReactions* react,
@@ -1721,7 +1714,11 @@ void solve_reaction(ICSReactions* react,
             std::cout << "REACT 2" << react << std::endl;
             if (!react->cache->is_allocated) {
                 std::cout << "react->cache->is_allocated is false, calling .allocate" << std::endl;
-                react->cache->allocate(react);
+                react->cache->allocate( react->num_params, 
+                                        react->num_species,
+                                        react->num_ecs_species, 
+                                        react->num_ecs_params,
+                                        react->num_regions);
             }
 
             std::cout << "REACT 3" << react << std::endl;
