@@ -1709,15 +1709,20 @@ void solve_reaction(ICSReactions* react,
             std::cout << "react->cache == nullptr..." << std::endl;
             react->cache = std::make_unique<ReactionStateCache>();
         }
+        std::cout << "REACT 1" << react << std::endl;
 
         if (react->cache->state_changed(states_for_reaction, params_for_reaction,
                                        ecs_states_for_reaction,
                                        ecs_params_for_reaction)) {
+            
             std::cout << "Change in state detected..." << std::endl;
+            std::cout << "REACT 2" << react << std::endl;
             if (!react->cache->is_allocated) {
                 std::cout << "react->cache->is_allocated is false, calling .allocate" << std::endl;
                 react->cache->allocate(react);
             }
+
+            std::cout << "REACT 3" << react << std::endl;
 
             react->cache->save_state(states_for_reaction, params_for_reaction,
                                     ecs_states_for_reaction,
@@ -1730,7 +1735,7 @@ void solve_reaction(ICSReactions* react,
         }
 
         nrn::Instrumentor::phase_end("check state cache");
-
+        std::cout << "REACT 4" << react << std::endl;
         if (!react->cached_jacobian || state_changed) { // Should the jacobian be recalculated?
 
             nrn::Instrumentor::phase_begin("allocate N x N matrix for jacobian");
