@@ -1508,7 +1508,7 @@ void get_reaction_rates(ICSReactions* react, double* states, double* rates, doub
 }
 
 void ReactionStateCache::allocate(ICSReactions *react) {
-    std::cout << "check state cache" << std::endl;
+    std::cout << "allocate" << std::endl;
     free_cache();
 
     num_params = react->num_params;
@@ -1516,6 +1516,13 @@ void ReactionStateCache::allocate(ICSReactions *react) {
     num_ecs_params = react->num_ecs_params;
     num_ecs_params = react->num_ecs_params;
     num_regions = react->num_regions;
+
+    std::cout << "new cache size: " << std::endl;
+    std::cout << "\tnum_params = " << num_params << std::endl;
+    std::cout << "\tnum_species = " << num_species << std::endl;
+    std::cout << "\tnum_ecs_params = " << num_ecs_params << std::endl;
+    std::cout << "\tnum_ecs_params = " << num_ecs_params << std::endl;
+    std::cout << "\tnum_regions = " << num_regions << std::endl;
 
     // NB: can malloc(0) occur here? (Implementation defined behavior)
     states_for_reaction = (double **)malloc(num_species * sizeof(double *));
@@ -1527,6 +1534,8 @@ void ReactionStateCache::allocate(ICSReactions *react) {
     for (int i = 0; i < num_params; i++) {
         params_for_reaction[i] = (double *)malloc(num_regions * sizeof(double));
     }
+
+    std::cout << "allocate -- midway" << std::endl;
 
     if (num_ecs_species > 0) {
         ecs_states_for_reaction =
@@ -1545,13 +1554,8 @@ void ReactionStateCache::allocate(ICSReactions *react) {
     }
 
     is_allocated = true;
-
-    std::cout << "cache size: " << std::endl;
-    std::cout << "\tnum_params = " << num_params << std::endl;
-    std::cout << "\tnum_species = " << num_species << std::endl;
-    std::cout << "\tnum_ecs_params = " << num_ecs_params << std::endl;
-    std::cout << "\tnum_ecs_params = " << num_ecs_params << std::endl;
-    std::cout << "\tnum_regions = " << num_regions << std::endl;
+    std::cout << "allocate -- end" << std::endl;
+    
     
 }
 
@@ -1694,7 +1698,9 @@ void solve_reaction(ICSReactions* react,
         if (react->cache.state_changed(states_for_reaction, params_for_reaction,
                                        ecs_states_for_reaction,
                                        ecs_params_for_reaction)) {
+            std::cout << "Change in state detected..." << std::endl;
             if (!react->cache.is_allocated) {
+                std::cout << "react->cache.is_allocated is false, calling .allocate" << std::endl;
                 react->cache.allocate(react);
             }
 
@@ -1703,6 +1709,9 @@ void solve_reaction(ICSReactions* react,
                                     ecs_params_for_reaction);
 
             state_changed = true;
+
+            std::cout << "Finished updating state" << std::endl;
+
         }
 
         nrn::Instrumentor::phase_end("check state cache");
