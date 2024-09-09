@@ -1704,6 +1704,7 @@ void solve_reaction(ICSReactions* react,
         nrn::Instrumentor::phase_begin("check state cache");
         std::cout << "check state cache" << std::endl;
         bool state_changed = false;
+        
         if (react->cache == nullptr) {
             react->cache = std::make_unique<ReactionStateCache>();
         }

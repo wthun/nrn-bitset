@@ -114,8 +114,10 @@ class ReactionStateCache {
 
             bool state_changed = false;
 
-            if(!is_allocated)
+            if(!is_allocated){
+                std::cout << "Not allocated... returning true" << std::endl;
                 return true;
+            }
 
             // check if (ICS) species states have changed
             std::cout << "check ICS species" << std::endl;
