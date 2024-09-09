@@ -204,19 +204,27 @@ class ReactionStateCache {
         }
 
         void free_cache(){
+            std::cout << "freeing states_for_reaction " << std::endl;
             for (int i=0; i < num_species; i++){
+                std::cout << "loop 1" << std::endl;
                 free(states_for_reaction[i]);
             }
             free(states_for_reaction);
 
+            std::cout << "num_params" << std::endl;
             for (int i=0; i < num_params; i++){
+                std::cout << "loop 2" << std::endl;
                 free(params_for_reaction[i]);
             }
+            std::cout << "params_for_reaction" << std::endl;
             free(params_for_reaction);
 
+            std::cout << "ecs_states_for_reaction" << std::endl;
             free(ecs_states_for_reaction);
+            std::cout << "ecs_params_for_reaction" << std::endl;
             free(ecs_params_for_reaction);
 
+            std::cout << "NULL assignment" << std::endl;
             states_for_reaction = NULL;
             params_for_reaction = NULL;
             ecs_states_for_reaction = NULL;
