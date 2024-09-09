@@ -1741,7 +1741,7 @@ void solve_reaction(ICSReactions* react,
             nrn::Instrumentor::phase_begin("allocate N x N matrix for jacobian");
             std::cout << "allocate N x N matrix for jacobian (N="<<30<<")." << std::endl;
             react->cached_jacobian = std::make_unique<OcFullMatrix>(N, N);
-            nrn::Instrumentor::phase_end("allocate N x N matrix for jacobian";
+            nrn::Instrumentor::phase_end("allocate N x N matrix for jacobian");
 
             /*Calculate I - Jacobian for ICS reactions*/
             nrn::Instrumentor::phase_begin("ICS Jacobian");
