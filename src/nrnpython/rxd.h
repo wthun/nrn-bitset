@@ -111,10 +111,21 @@ class ReactionStateCache {
                            double *new_ecs_states_for_reaction,
                            double *new_ecs_params_for_reaction) {
             std::cout << "state_changed " << std::endl;
+	    std::cout << "this is : " << this << std::endl;
 
+	    if (this == nullptr || this == NULL) {
+	      std::cout << "this is NULL, aj aj aj" << std::endl;
+
+	    }
+	    
+   	    std::cout << "is_allocated = " << this->is_allocated << std::endl;
+            std::cout << "state_changed 2" << std::endl;
+	    
             bool _state_changed = false;
-
-            if(!is_allocated){
+	    std::cout << "_state_changed set" << std::endl;
+   	    std::cout << "is_allocated" << this->is_allocated << std::endl;
+	    
+            if(!this->is_allocated){
                 std::cout << "Not allocated... returning true" << std::endl;
                 return true;
             }

@@ -1705,11 +1705,13 @@ void solve_reaction(ICSReactions* react,
         std::cout << "check state cache" << std::endl;
         bool state_changed = false;
         
-        if (react->cache == nullptr) {
+        if (!react->cache) {
             std::cout << "react->cache == nullptr..." << std::endl;
             react->cache = std::make_unique<ReactionStateCache>();
         }
-        std::cout << "REACT 1" << react << std::endl;
+	
+        std::cout << "REACT 1=" << react << std::endl;
+	
 
         if (react->cache->state_changed(states_for_reaction, params_for_reaction,
                                        ecs_states_for_reaction,
