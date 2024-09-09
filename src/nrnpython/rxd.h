@@ -49,14 +49,14 @@ class ICSReactions; // forward declaration
 class ReactionStateCache {
 
     public:
-        ReactionStateCache(){
-            std::cout << "At initialization, cache holds: " << std::endl;
-            std::cout << "\tnum_params = " << num_params << std::endl;
-            std::cout << "\tnum_species = " << num_species << std::endl;
-            std::cout << "\tnum_ecs_params = " << num_ecs_params << std::endl;
-            std::cout << "\tnum_ecs_params = " << num_ecs_params << std::endl;
-            std::cout << "\tnum_regions = " << num_regions << std::endl;
-        }
+        //ReactionStateCache(){
+        //    std::cout << "At initialization, cache holds: " << std::endl;
+        //    std::cout << "\tnum_params = " << num_params << std::endl;
+        //    std::cout << "\tnum_species = " << num_species << std::endl;
+        //    std::cout << "\tnum_ecs_params = " << num_ecs_params << std::endl;
+        //    std::cout << "\tnum_ecs_params = " << num_ecs_params << std::endl;
+        //    std::cout << "\tnum_regions = " << num_regions << std::endl;
+        //}
         bool is_allocated = false;
         bool is_assigned = false;
 
