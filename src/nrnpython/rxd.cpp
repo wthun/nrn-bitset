@@ -1552,6 +1552,7 @@ void solve_reaction(ICSReactions* react,
                     double* cvode_states,
                     double* cvode_b) {
     nrn::Instrumentor::phase_begin("solve_reaction");
+    std::cout << "solve_reaction" << std::endl;
 
     int segment;
     int i, j, k, idx, jac_i, jac_j, jac_idx;
@@ -1567,6 +1568,7 @@ void solve_reaction(ICSReactions* react,
     auto x = std::make_unique<IvocVect>(N);
 
     nrn::Instrumentor::phase_begin("allocate memory");
+    std::cout << "allocate memory" << std::endl;
     double** states_for_reaction = (double**) malloc(react->num_species * sizeof(double*));
     double** states_for_reaction_dx = (double**) malloc(react->num_species * sizeof(double*));
     double** params_for_reaction = (double**) malloc(react->num_params * sizeof(double*));
@@ -1611,6 +1613,7 @@ void solve_reaction(ICSReactions* react,
 
     for (segment = 0; segment < react->num_segments; segment++) {
         nrn::Instrumentor::phase_begin("setup states");
+        std::cout << "setup states" << std::endl;
         if (react->vptrs != NULL)
             v = *(react->vptrs[segment]);
 
@@ -1676,6 +1679,7 @@ void solve_reaction(ICSReactions* react,
         nrn::Instrumentor::phase_end("setup states");
 
         nrn::Instrumentor::phase_begin("check state cache");
+        std::cout << "check state cache" << std::endl;
         bool state_changed = false;
 
         if (react->cache.state_changed(states_for_reaction, params_for_reaction,
@@ -1697,11 +1701,13 @@ void solve_reaction(ICSReactions* react,
         if (!react->cached_jacobian || state_changed) { // Should the jacobian be recalculated?
 
             nrn::Instrumentor::phase_begin("allocate N x N matrix for jacobian");
+            std::cout << "allocate N x N matrix for jacobian" << std::endl;
             react->cached_jacobian = std::make_unique<OcFullMatrix>(N, N);
             nrn::Instrumentor::phase_end("allocate N x N matrix for jacobian");
 
             /*Calculate I - Jacobian for ICS reactions*/
             nrn::Instrumentor::phase_begin("ICS Jacobian");
+            std::cout << "ICS Jacobian" << std::endl;
             for (i = 0, idx = 0; i < react->num_species; i++) {
                 for (j = 0; j < react->num_regions; j++) {
                     if (react->state_idx[segment][i][j] != SPECIES_ABSENT) {
@@ -1758,6 +1764,7 @@ void solve_reaction(ICSReactions* react,
 
             /*Calculate I - Jacobian for MultiCompartment ECS reactions*/
             nrn::Instrumentor::phase_begin("ECS Jacobian");
+            std::cout << "ECS Jacobian" << std::endl;
             for (i = 0; i < react->num_ecs_species; i++) {
                 if (react->ecs_state[segment][i] != NULL) {
                     if (bval == NULL)
@@ -1811,11 +1818,13 @@ void solve_reaction(ICSReactions* react,
 
             // solve for x, destructively
             nrn::Instrumentor::phase_begin("Solve jacobian + LU");
+            std::cout << "Solve jacobian + LU" << std::endl;
             jacobian->solv(b.get(), x.get(), false);
             nrn::Instrumentor::phase_end("Solve jacobian + LU");
         } else {
             // solve for x, destructively
             nrn::Instrumentor::phase_begin("Solve jacobian using cached LU");
+            std::cout << "Solve jacobian using cached LU" << std::endl;
             jacobian->solv(b.get(), x.get(), true);
             nrn::Instrumentor::phase_end("Solve jacobian using cached LU");
         }
@@ -1823,6 +1832,7 @@ void solve_reaction(ICSReactions* react,
         
         // update states
         nrn::Instrumentor::phase_begin("Update RxD states");
+        std::cout << "Update RxD states" << std::endl;
         if (bval != NULL)  // variable-step
         {
             for (i = 0, jac_idx = 0; i < react->num_species; i++) {

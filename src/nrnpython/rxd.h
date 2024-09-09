@@ -117,7 +117,7 @@ class ReactionStateCache {
                                             states_for_reaction[i][j]);
 
                     if (delta > delta_threshold) {
-                      state_changed = true;
+                        state_changed = true;
                     }
 
                   } else if (new_states_for_reaction[i][j] > 0) {
