@@ -49,6 +49,14 @@ class ICSReactions; // forward declaration
 class ReactionStateCache {
 
     public:
+        ReactionStateCache(){
+            std::cout << "At initialization, cache holds: " << std::endl;
+            std::cout << "\tnum_params = " << num_params << std::endl;
+            std::cout << "\tnum_species = " << num_species << std::endl;
+            std::cout << "\tnum_ecs_params = " << num_ecs_params << std::endl;
+            std::cout << "\tnum_ecs_params = " << num_ecs_params << std::endl;
+            std::cout << "\tnum_regions = " << num_regions << std::endl;
+        }
         bool is_allocated = false;
         bool is_assigned = false;
 
@@ -214,7 +222,8 @@ class ReactionStateCache {
 
             std::cout << "freeing states_for_reaction " << std::endl;
             for (int i=0; i < num_species; i++){
-                std::cout << "loop 1" << std::endl;
+                std::cout << "loop 1 [" << i << "]" << std::endl;
+                std::cout << states_for_reaction[i] << std::endl;
                 free(states_for_reaction[i]);
             }
             std::cout << "states_for_reaction" << states_for_reaction << std::endl;
@@ -279,7 +288,7 @@ typedef struct ICSReactions {
     // also track cache hits and misses
     std::unique_ptr<OcFullMatrix> cached_jacobian = nullptr;
 
-    ReactionStateCache cache;
+    ReactionStateCache cache();
 
     
 
