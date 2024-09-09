@@ -44,8 +44,6 @@ typedef struct SpeciesIndexList {
     struct SpeciesIndexList* next;
 } SpeciesIndexList;
 
-class ICSReactions; // forward declaration
-
 class ReactionStateCache {
 
     public:
@@ -79,7 +77,8 @@ class ReactionStateCache {
         long cache_hits = 0;
         long cache_misses = 0;
 
-        void allocate(ICSReactions *react);
+        void allocate(int num_params, int num_species, int num_ecs_species,
+                      int num_ecs_params, int num_regions);
 
         void save_state(double **states_for_reaction, double **params_for_reaction,
                         double *ecs_states_for_reaction,
