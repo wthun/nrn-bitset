@@ -183,7 +183,7 @@ class ReactionStateCache {
             }
 
             // temp, for development (remember to also remove iostream import )
-            if ((cache_misses + cache_hits) % 100000) {
+            if ((cache_misses + cache_hits) % 10000) {
                 std::cout << "[RXD CACHE] #HITS = " << cache_hits
                           << " #MISSES = " << cache_misses << std::endl;
             }
