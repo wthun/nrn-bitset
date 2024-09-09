@@ -1701,6 +1701,9 @@ void solve_reaction(ICSReactions* react,
         if (react->cache == nullptr) {
             std::cout << "react->cache == nullptr..." << std::endl;
             react->cache = std::make_unique<ReactionStateCache>();
+        } else {
+            auto rptr = (react->cache)
+            std::cout << "react->cache = " << rptr << std::endl;
         }
         std::cout << "REACT 1" << react << std::endl;
 
