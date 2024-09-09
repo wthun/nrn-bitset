@@ -3,6 +3,10 @@
 #include <mutex>
 #include <thread>
 #include <vector>
+#include <cmath>
+
+// TEMP, for debugging
+#include <iostream>
 
 #include "ocmatrix.h"
 
@@ -40,6 +44,187 @@ typedef struct SpeciesIndexList {
     struct SpeciesIndexList* next;
 } SpeciesIndexList;
 
+class ICSReactions; // forward declaration
+
+class ReactionStateCache {
+
+    public:
+        bool is_allocated = false;
+        bool is_assigned = false;
+
+        double **states_for_reaction = NULL;
+        double **params_for_reaction = NULL;
+        double *ecs_states_for_reaction = NULL;
+        double *ecs_params_for_reaction = NULL;
+
+        int num_params = 0;
+        int num_species = 0;
+
+        int num_ecs_params = 0;
+        int num_ecs_species = 0;
+
+        int num_regions = 0;
+
+        double delta_threshold = 1e-4; 
+
+        // count cache hits
+        long cache_hits = 0;
+        long cache_misses = 0;
+
+        void allocate(ICSReactions *react);
+
+        void save_state(double **states_for_reaction, double **params_for_reaction,
+                        double *ecs_states_for_reaction,
+                        double *ecs_params_for_reaction) {
+
+          for (int i = 0; i < num_species; i++) {
+            memcpy(this->states_for_reaction[i], states_for_reaction[i],
+                   num_regions * sizeof(double));
+          }
+          for (int i = 0; i < num_species; i++) {
+            memcpy(this->params_for_reaction[i], params_for_reaction[i],
+                   num_regions * sizeof(double));
+          }
+
+          if (num_ecs_species > 0) {
+            memcpy(this->ecs_states_for_reaction, ecs_states_for_reaction,
+                   num_ecs_species * sizeof(double));
+          }
+
+          if (num_ecs_params > 0) {
+            memcpy(this->ecs_params_for_reaction, ecs_params_for_reaction,
+                   num_ecs_params * sizeof(double));
+          }
+        }
+
+        bool state_changed(double **new_states_for_reaction,
+                           double **new_params_for_reaction,
+                           double *new_ecs_states_for_reaction,
+                           double *new_ecs_params_for_reaction) {
+            
+            bool state_changed = false;
+
+            if(!is_allocated)
+                return true;
+
+            // check if (ICS) species states have changed
+            for (int i = 0; !state_changed && i < num_species; i++) {
+                for (int j = 0; !state_changed && j < num_regions; j++) {
+
+                  if (states_for_reaction[i][j] > 0) {
+                    double delta = std::abs((states_for_reaction[i][j] -
+                                             new_states_for_reaction[i][j]) /
+                                            states_for_reaction[i][j]);
+
+                    if (delta > delta_threshold) {
+                      state_changed = true;
+                    }
+
+                  } else if (new_states_for_reaction[i][j] > 0) {
+                    state_changed = true;
+                    // todo: deal with negative values?
+                    // (e.g. if new species are added after simulation)
+                  }
+                }
+            }
+
+            // check if (ICS) parameters changed
+            for (int i = 0; !state_changed && i < num_params; i++) {
+                for (int j = 0; !state_changed && j < num_regions; j++) {
+                  if (params_for_reaction[i][j] != 0) {
+                    double delta = std::abs((params_for_reaction[i][j] -
+                                             new_params_for_reaction[i][j]) /
+                                            params_for_reaction[i][j]);
+                    if (delta > delta_threshold) {
+                      state_changed = true;
+                    }
+
+                  } else if (params_for_reaction[i][j] !=
+                             new_params_for_reaction[i][j]) {
+                    state_changed = true;
+                  }
+                }
+            }
+
+            // check if ECS species changed
+            for (int i = 0; !state_changed && i < num_ecs_species; i++) {
+                if (ecs_states_for_reaction[i] > 0) {
+                  double delta = std::abs((ecs_states_for_reaction[i] -
+                                           new_ecs_states_for_reaction[i]) /
+                                          ecs_states_for_reaction[i]);
+                  if (delta > delta_threshold) {
+                    state_changed = true;
+                  }
+                } else if (ecs_states_for_reaction[i] !=
+                           new_ecs_states_for_reaction[i]) {
+                    state_changed = true;           
+                }
+            }
+
+            // check if ECS params changed
+            for (int i = 0; !state_changed && i < num_ecs_params; i++) {
+                if (ecs_params_for_reaction[i] != 0) {
+                    double delta = std::abs((ecs_params_for_reaction[i] -
+                                             new_ecs_params_for_reaction[i]) /
+                                            ecs_params_for_reaction[i]);
+                    if (delta > delta_threshold) {
+                        state_changed = true;
+                    }
+                } else if (ecs_params_for_reaction[i] != new_ecs_params_for_reaction[i]) {
+                    state_changed = true;
+                }
+            }
+
+            // count cache misses
+            if (state_changed){
+                cache_misses++;
+            } else {
+                cache_hits++;
+            }
+
+            // temp, for development (remember to also remove iostream import )
+            if ((cache_misses + cache_hits) % 100000) {
+                std::cout << "[RXD CACHE] #HITS = " << cache_hits
+                          << " #MISSES = " << cache_misses << std::endl;
+            }
+
+            is_assigned = true;
+
+            return state_changed;
+            // continue on Monday
+            // check if the states have changed, 
+
+            // change to contiguous memory allocation?
+        }
+
+        void free_cache(){
+            for (int i=0; i < num_species; i++){
+                free(states_for_reaction[i]);
+            }
+            free(states_for_reaction);
+
+            for (int i=0; i < num_params; i++){
+                free(params_for_reaction[i]);
+            }
+            free(params_for_reaction);
+
+            free(ecs_states_for_reaction);
+            free(ecs_params_for_reaction);
+
+            states_for_reaction = NULL;
+            params_for_reaction = NULL;
+            ecs_states_for_reaction = NULL;
+            ecs_params_for_reaction = NULL;
+
+            is_allocated = false;
+
+        }
+
+        ~ReactionStateCache(){
+            free_cache();
+        }
+};
+
 typedef struct ICSReactions {
     ReactionRate reaction;
     int num_species;
@@ -70,131 +255,15 @@ typedef struct ICSReactions {
     // old_state (?) to check for updates.
     // also track cache hits and misses
     std::unique_ptr<OcFullMatrix> cached_jacobian = nullptr;
-    //std::unique_ptr<double*> cached_state = nullptr;
 
-    std::unique_ptr<double[][]> = nullptr;
+    ReactionStateCache cache;
+
+    
 
 
 } ICSReactions;
 
-struct ReactionStateCache {
-    bool allocated = false;
 
-    double **states_for_reaction = NULL;
-    double **params_for_reaction = NULL;
-    double *ecs_states_for_reaction = NULL;
-    double *ecs_params_for_reaction = NULL;
-
-    int num_params = 0;
-    int num_species = 0;
-
-    int num_ecs_params = 0;
-    int num_ecs_species = 0;
-
-    int num_regions = 0;
-
-    void allocate(ICSReactions *react) {
-      free_cache();
-
-      num_params = react->num_params;
-      num_species = react->num_species;
-      num_ecs_params = react->num_ecs_params;
-      num_ecs_params = react->num_ecs_params;
-      num_regions = react->num_regions;
-
-      // NB: can malloc(0) occur here? (Implementation defined behavior)
-      states_for_reaction = (double **)malloc(num_species * sizeof(double *));
-      for (int i = 0; i < num_species; i++) {
-        states_for_reaction[i] = (double *)malloc(num_regions * sizeof(double));
-      }
-
-      params_for_reaction = (double **)malloc(num_params * sizeof(double *));
-      for (int i = 0; i < num_params; i++) {
-        params_for_reaction[i] = (double *)malloc(num_regions * sizeof(double));
-      }
-
-      if (num_ecs_species > 0) {
-        ecs_states_for_reaction =
-            (double *)malloc(num_ecs_species * sizeof(double));
-      } else {
-        free(ecs_states_for_reaction);
-        ecs_states_for_reaction = NULL;
-      }
-
-      if (num_ecs_params > 0) {
-        ecs_params_for_reaction =
-            (double *)malloc(num_ecs_params * sizeof(double));
-      } else {
-        free(ecs_params_for_reaction);
-        ecs_params_for_reaction = NULL;
-      }
-
-      allocated = true;
-    }
-
-    void save(double **states_for_reaction, double **params_for_reaction,
-              double *ecs_states_for_reaction,
-              double *ecs_params_for_reaction) {
-
-        for (int i = 0; i < num_species; i++) {
-            memcpy(this->states_for_reaction[i], states_for_reaction[i],
-                   num_regions * sizeof(double));
-        }
-        for (int i = 0; i < num_species; i++) {
-            memcpy(this->params_for_reaction[i], params_for_reaction[i],
-                   num_regions * sizeof(double));
-        }
-
-        if (num_ecs_species > 0) {
-            memcpy(this->ecs_states_for_reaction, ecs_states_for_reaction,
-                   num_ecs_species * sizeof(double));
-        }
-
-        if (num_ecs_params > 0) {
-            memcpy(this->ecs_params_for_reaction, ecs_params_for_reaction,
-                   num_ecs_params * sizeof(double));
-        }
-    }
-
-    bool state_changed(ICSReactions * react){        
-        if(!allocated)
-            return true;
-
-        // continue on Monday
-        // check if the states have changed, 
-
-        // change to contiguous memory allocation?
-
-
-    }
-
-    void free_cache(){
-        for (int i=0; i < num_species; i++){
-            free(states_for_reaction[i]);
-        }
-        free(states_for_reaction);
-
-        for (int i=0; i < num_params; i++){
-            free(params_for_reaction[i]);
-        }
-        free(params_for_reaction);
-
-        free(ecs_states_for_reaction);
-        free(ecs_params_for_reaction);
-
-        states_for_reaction = NULL;
-        params_for_reaction = NULL;
-        ecs_states_for_reaction = NULL;
-        ecs_params_for_reaction = NULL;
-
-        allocated = false;
-
-    }
-
-    ~ReactionStateCache(){
-        free_cache();
-    }
-};
 
 typedef struct TaskList {
     void* (*task)(void*);

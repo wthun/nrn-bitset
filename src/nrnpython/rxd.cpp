@@ -16,6 +16,8 @@
 #include "ocmatrix.h"
 #include "ivocvect.h"
 
+#include "utils/profile/profiler_interface.h"
+
 static void ode_solve(double, double*, double*);
 extern PyTypeObject* hocobject_type;
 extern int structure_change_cnt;
@@ -1505,15 +1507,52 @@ void get_reaction_rates(ICSReactions* react, double* states, double* rates, doub
     }
 }
 
+void ReactionStateCache::allocate(ICSReactions *react) {
+    free_cache();
 
+    num_params = react->num_params;
+    num_species = react->num_species;
+    num_ecs_params = react->num_ecs_params;
+    num_ecs_params = react->num_ecs_params;
+    num_regions = react->num_regions;
 
+    // NB: can malloc(0) occur here? (Implementation defined behavior)
+    states_for_reaction = (double **)malloc(num_species * sizeof(double *));
+    for (int i = 0; i < num_species; i++) {
+        states_for_reaction[i] = (double *)malloc(num_regions * sizeof(double));
+    }
 
+    params_for_reaction = (double **)malloc(num_params * sizeof(double *));
+    for (int i = 0; i < num_params; i++) {
+        params_for_reaction[i] = (double *)malloc(num_regions * sizeof(double));
+    }
+
+    if (num_ecs_species > 0) {
+        ecs_states_for_reaction =
+            (double *)malloc(num_ecs_species * sizeof(double));
+    } else {
+        free(ecs_states_for_reaction);
+        ecs_states_for_reaction = NULL;
+    }
+
+    if (num_ecs_params > 0) {
+        ecs_params_for_reaction =
+            (double *)malloc(num_ecs_params * sizeof(double));
+    } else {
+        free(ecs_params_for_reaction);
+        ecs_params_for_reaction = NULL;
+    }
+
+    is_allocated = true;
+}
 
 void solve_reaction(ICSReactions* react,
                     double* states,
                     double* bval,
                     double* cvode_states,
                     double* cvode_b) {
+    nrn::Instrumentor::phase_begin("solve_reaction");
+
     int segment;
     int i, j, k, idx, jac_i, jac_j, jac_idx;
     int N = react->icsN + react->ecsN; /*size of Jacobian (number species*regions for a segments)*/
@@ -1527,6 +1566,7 @@ void solve_reaction(ICSReactions* react,
     auto b = std::make_unique<IvocVect>(N);
     auto x = std::make_unique<IvocVect>(N);
 
+    nrn::Instrumentor::phase_begin("allocate memory");
     double** states_for_reaction = (double**) malloc(react->num_species * sizeof(double*));
     double** states_for_reaction_dx = (double**) malloc(react->num_species * sizeof(double*));
     double** params_for_reaction = (double**) malloc(react->num_params * sizeof(double*));
@@ -1567,7 +1607,10 @@ void solve_reaction(ICSReactions* react,
     for (i = 0; i < react->num_params; i++)
         params_for_reaction[i] = (double*) malloc(react->num_regions * sizeof(double));
 
+    nrn::Instrumentor::phase_end("allocate memory");
+
     for (segment = 0; segment < react->num_segments; segment++) {
+        nrn::Instrumentor::phase_begin("setup states");
         if (react->vptrs != NULL)
             v = *(react->vptrs[segment]);
 
@@ -1630,25 +1673,35 @@ void solve_reaction(ICSReactions* react,
                         NULL,
                         v);
 
-        bool STATE_CHANGED = true;
+        nrn::Instrumentor::phase_end("setup states");
 
-        // Did these change?
-        // states_for_reaction
-        // params_for_reaction
-        // ecs_states_for_reaction
-        // ecs_params_for_reaction
+        nrn::Instrumentor::phase_begin("check state cache");
+        bool state_changed = false;
 
-        // double** states_for_reaction = (double**) malloc(react->num_species * sizeof(double*));
-        // double** params_for_reaction = (double**) malloc(react->num_params * sizeof(double*));
-        // double* ecs_states_for_reaction = NULL;
-        // double* ecs_params_for_reaction = NULL;
+        if (react->cache.state_changed(states_for_reaction, params_for_reaction,
+                                       ecs_states_for_reaction,
+                                       ecs_params_for_reaction)) {
+            if (!react->cache.is_allocated) {
+                react->cache.allocate(react);
+            }
 
+            react->cache.save_state(states_for_reaction, params_for_reaction,
+                                    ecs_states_for_reaction,
+                                    ecs_params_for_reaction);
 
-        if (!react->cached_jacobian || STATE_CHANGED) { // Should the jacobian be recalculated?
+            state_changed = true;
+        }
+
+        nrn::Instrumentor::phase_end("check state cache");
+
+        if (!react->cached_jacobian || state_changed) { // Should the jacobian be recalculated?
+
+            nrn::Instrumentor::phase_begin("allocate N x N matrix for jacobian");
             react->cached_jacobian = std::make_unique<OcFullMatrix>(N, N);
-            
+            nrn::Instrumentor::phase_end("allocate N x N matrix for jacobian");
 
             /*Calculate I - Jacobian for ICS reactions*/
+            nrn::Instrumentor::phase_begin("ICS Jacobian");
             for (i = 0, idx = 0; i < react->num_species; i++) {
                 for (j = 0; j < react->num_regions; j++) {
                     if (react->state_idx[segment][i][j] != SPECIES_ABSENT) {
@@ -1701,8 +1754,10 @@ void solve_reaction(ICSReactions* react,
                     }
                 }
             }
+            nrn::Instrumentor::phase_end("ICS Jacobian");
 
             /*Calculate I - Jacobian for MultiCompartment ECS reactions*/
+            nrn::Instrumentor::phase_begin("ECS Jacobian");
             for (i = 0; i < react->num_ecs_species; i++) {
                 if (react->ecs_state[segment][i] != NULL) {
                     if (bval == NULL)
@@ -1752,20 +1807,22 @@ void solve_reaction(ICSReactions* react,
                     idx++;
                 }
             }
+            nrn::Instrumentor::phase_end("ECS Jacobian");
 
             // solve for x, destructively
+            nrn::Instrumentor::phase_begin("Solve jacobian + LU");
             jacobian->solv(b.get(), x.get(), false);
+            nrn::Instrumentor::phase_end("Solve jacobian + LU");
         } else {
-
             // solve for x, destructively
+            nrn::Instrumentor::phase_begin("Solve jacobian using cached LU");
             jacobian->solv(b.get(), x.get(), true);
+            nrn::Instrumentor::phase_end("Solve jacobian using cached LU");
         }
         
         
-
-
-
         // update states
+        nrn::Instrumentor::phase_begin("Update RxD states");
         if (bval != NULL)  // variable-step
         {
             for (i = 0, jac_idx = 0; i < react->num_species; i++) {
@@ -1795,8 +1852,10 @@ void solve_reaction(ICSReactions* react,
                     react->ecs_grid[i]->all_reaction_states[ecsindex[i]++] = x->elem(jac_idx++);
             }
         }
+        nrn::Instrumentor::phase_end("Update RxD states");
     }
 
+    nrn::Instrumentor::phase_begin("free memory");
     // free memory that was allocated in here
     free(ecsindex);
     for (i = 0; i < react->num_species; i++) {
@@ -1822,6 +1881,9 @@ void solve_reaction(ICSReactions* react,
     }
     if (react->num_ecs_params > 0)
         free(ecs_params_for_reaction);
+    nrn::Instrumentor::phase_end("free memory");
+
+    nrn::Instrumentor::phase_end("solve_reaction");
 }
 
 void do_ics_reactions(double* states, double* b, double* cvode_states, double* cvode_b) {
