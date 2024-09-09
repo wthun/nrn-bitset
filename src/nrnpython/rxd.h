@@ -288,8 +288,7 @@ typedef struct ICSReactions {
     // also track cache hits and misses
     std::unique_ptr<OcFullMatrix> cached_jacobian = nullptr;
 
-    ReactionStateCache cache;
-
+    std::unique_ptr<ReactionStateCache> cache = nullptr;
     
 
 

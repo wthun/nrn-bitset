@@ -1573,11 +1573,11 @@ void solve_reaction(ICSReactions* react,
                     double* cvode_b) {
 
     std::cout << "cache holds (at start of solve_reaction)" << std::endl;
-    std::cout << "\tnum_params = " << react->cache.num_params << std::endl;
-    std::cout << "\tnum_species = " << react->cache.num_species << std::endl;
-    std::cout << "\tnum_ecs_params = " << react->cache.num_ecs_params << std::endl;
-    std::cout << "\tnum_ecs_params = " << react->cache.num_ecs_params << std::endl;
-    std::cout << "\tnum_regions = " << react->cache.num_regions << std::endl;
+    std::cout << "\tnum_params = " << react->cache->num_params << std::endl;
+    std::cout << "\tnum_species = " << react->cache->num_species << std::endl;
+    std::cout << "\tnum_ecs_params = " << react->cache->num_ecs_params << std::endl;
+    std::cout << "\tnum_ecs_params = " << react->cache->num_ecs_params << std::endl;
+    std::cout << "\tnum_regions = " << react->cache->num_regions << std::endl;
 
 
     nrn::Instrumentor::phase_begin("solve_reaction");
@@ -1710,17 +1710,20 @@ void solve_reaction(ICSReactions* react,
         nrn::Instrumentor::phase_begin("check state cache");
         std::cout << "check state cache" << std::endl;
         bool state_changed = false;
+        if (react->cache == nullptr) {
+            react->cache = std::make_unique<ReactionStateCache>();
+        }
 
-        if (react->cache.state_changed(states_for_reaction, params_for_reaction,
+        if (react->cache->state_changed(states_for_reaction, params_for_reaction,
                                        ecs_states_for_reaction,
                                        ecs_params_for_reaction)) {
             std::cout << "Change in state detected..." << std::endl;
-            if (!react->cache.is_allocated) {
-                std::cout << "react->cache.is_allocated is false, calling .allocate" << std::endl;
-                react->cache.allocate(react);
+            if (!react->cache->is_allocated) {
+                std::cout << "react->cache->is_allocated is false, calling .allocate" << std::endl;
+                react->cache->allocate(react);
             }
 
-            react->cache.save_state(states_for_reaction, params_for_reaction,
+            react->cache->save_state(states_for_reaction, params_for_reaction,
                                     ecs_states_for_reaction,
                                     ecs_params_for_reaction);
 
