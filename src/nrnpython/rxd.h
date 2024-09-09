@@ -90,7 +90,7 @@ class ReactionStateCache {
             memcpy(this->states_for_reaction[i], states_for_reaction[i],
                    num_regions * sizeof(double));
           }
-          for (int i = 0; i < num_species; i++) {
+          for (int i = 0; i < num_params; i++) {
             memcpy(this->params_for_reaction[i], params_for_reaction[i],
                    num_regions * sizeof(double));
           }
