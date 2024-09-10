@@ -71,7 +71,7 @@ class ReactionStateCache {
 
         int num_regions = 0;
 
-        double delta_threshold = 1e-4; 
+        double delta_threshold = 1e-5; 
 
         // count cache hits
         long cache_hits = 0;
@@ -110,19 +110,8 @@ class ReactionStateCache {
                            double *new_ecs_states_for_reaction,
                            double *new_ecs_params_for_reaction) {
             std::cout << "state_changed " << std::endl;
-	    std::cout << "this is : " << this << std::endl;
 
-	    if (this == nullptr || this == NULL) {
-	      std::cout << "this is NULL, aj aj aj" << std::endl;
-
-	    }
-	    
-   	    std::cout << "is_allocated = " << this->is_allocated << std::endl;
-            std::cout << "state_changed 2" << std::endl;
-	    
             bool _state_changed = false;
-	    std::cout << "_state_changed set" << std::endl;
-   	    std::cout << "is_allocated" << this->is_allocated << std::endl;
 	    
             if(!this->is_allocated){
                 std::cout << "Not allocated... returning true" << std::endl;
@@ -130,29 +119,36 @@ class ReactionStateCache {
             }
 
             // check if (ICS) species states have changed
-            std::cout << "check ICS species" << std::endl;
+            std::cout << "check ICS species, _state_changed=" << _state_changed << ", num_species=" << num_species << ", num_regions=" << num_regions << std::endl;
             for (int i = 0; !_state_changed && i < num_species; i++) {
                 for (int j = 0; !_state_changed && j < num_regions; j++) {
-
+		  std::cout << "i=" << i << ", j=" << j << ", states_for_reaction=" << states_for_reaction[i][j] << std::endl;
+		  
                   if (states_for_reaction[i][j] > 0) {
                     double delta = std::abs((states_for_reaction[i][j] -
                                              new_states_for_reaction[i][j]) /
                                             states_for_reaction[i][j]);
-
+		    std::cout << "delta (" << i << "," << j << ")= " << delta;
                     if (delta > delta_threshold) {
                         _state_changed = true;
+			std::cout << " changed.";
                     }
-
+		    std::cout << std::endl;
+		    
                   } else if (new_states_for_reaction[i][j] > 0) {
+		    std::cout << "new_state_for_reaction > 0";
                     _state_changed = true;
                     // todo: deal with negative values?
                     // (e.g. if new species are added after simulation)
                   }
+		  else {
+		    std::cout << "new_state_for_reaction = " << new_states_for_reaction[i][j] << std::endl;
+		  }
                 }
             }
 
             // check if (ICS) parameters changed
-            std::cout << "check ICS parameters" << std::endl;
+            std::cout << "check ICS parameters, state_changed = " << _state_changed << std::endl;
             for (int i = 0; !_state_changed && i < num_params; i++) {
                 for (int j = 0; !_state_changed && j < num_regions; j++) {
                   if (params_for_reaction[i][j] != 0) {
@@ -171,7 +167,7 @@ class ReactionStateCache {
             }
 
             // check if ECS species changed
-            std::cout << "check ECS species" << std::endl;
+            std::cout << "check ECS species, _state_changed=" << _state_changed << std::endl;
             for (int i = 0; !_state_changed && i < num_ecs_species; i++) {
                 if (ecs_states_for_reaction[i] > 0) {
                   double delta = std::abs((ecs_states_for_reaction[i] -
@@ -187,7 +183,7 @@ class ReactionStateCache {
             }
 
             // check if ECS params changed
-            std::cout << "check ECS parameters" << std::endl;
+            std::cout << "check ECS parameters, _state_changed" << _state_changed << std::endl;
             for (int i = 0; !_state_changed && i < num_ecs_params; i++) {
                 if (ecs_params_for_reaction[i] != 0) {
                     double delta = std::abs((ecs_params_for_reaction[i] -
@@ -260,6 +256,12 @@ class ReactionStateCache {
             ecs_states_for_reaction = NULL;
             ecs_params_for_reaction = NULL;
 
+	    num_params = 0;
+	    num_species = 0;
+	    num_ecs_species = 0;
+	    num_ecs_params = 0;
+	    num_regions = 0;
+    	    
             is_allocated = false;
 
         }

@@ -1523,6 +1523,12 @@ void ReactionStateCache::allocate(int num_params, int num_species,
     std::cout << "allocate" << std::endl;
     free_cache();
 
+    this->num_params = num_params;
+    this->num_species = num_species;
+    this->num_ecs_species = num_ecs_species;
+    this->num_ecs_params = num_ecs_params;
+    this->num_regions = num_regions;
+    
     std::cout << "new cache size: " << std::endl;
     std::cout << "\tnum_params = " << num_params << std::endl;
     std::cout << "\tnum_species = " << num_species << std::endl;
