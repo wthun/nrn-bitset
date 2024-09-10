@@ -1703,7 +1703,7 @@ void solve_reaction(ICSReactions* react,
             react->cache = std::make_unique<ReactionStateCache>();
         } else {
             auto rptr = (react->cache);
-            std::cout << "react->cache = " << rptr << std::endl;
+            std::cout << "react->cache = " << rptr.get() << std::endl;
         }
 	
         std::cout << "REACT 1=" << react << std::endl;
