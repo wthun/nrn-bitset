@@ -109,19 +109,19 @@ class ReactionStateCache {
             }
 
             // check if (ICS) species states have changed
-            std::cout << "check ICS species, _state_changed=" << _state_changed << ", num_species=" << num_species << ", num_regions=" << num_regions << std::endl;
+            // std::cout << "check ICS species, _state_changed=" << _state_changed << ", num_species=" << num_species << ", num_regions=" << num_regions << std::endl;
             for (int i = 0; !_state_changed && i < num_species; i++) {
                 for (int j = 0; !_state_changed && j < num_regions; j++) {
                   if (states_for_reaction[i][j] > 0) {
                     double delta = std::abs((states_for_reaction[i][j] -
                                              new_states_for_reaction[i][j]) /
                                             states_for_reaction[i][j]);
-		    std::cout << "delta (" << i << "," << j << ")= " << delta;
+		    // std::cout << "delta (" << i << "," << j << ")= " << delta;
                     if (delta > delta_threshold) {
                         _state_changed = true;
-			std::cout << " changed.";
+			// std::cout << " changed.";
                     }
-		    std::cout << std::endl;
+		    // std::cout << std::endl;
 		    
                   } else if (new_states_for_reaction[i][j] > 0) {
                     _state_changed = true;
@@ -132,7 +132,7 @@ class ReactionStateCache {
             }
 
             // check if (ICS) parameters changed
-            std::cout << "check ICS parameters, state_changed = " << _state_changed << std::endl;
+            // std::cout << "check ICS parameters, state_changed = " << _state_changed << std::endl;
             for (int i = 0; !_state_changed && i < num_params; i++) {
                 for (int j = 0; !_state_changed && j < num_regions; j++) {
                   if (params_for_reaction[i][j] != 0) {
@@ -151,7 +151,7 @@ class ReactionStateCache {
             }
 
             // check if ECS species changed
-            std::cout << "check ECS species, _state_changed=" << _state_changed << std::endl;
+            // std::cout << "check ECS species, _state_changed=" << _state_changed << std::endl;
             for (int i = 0; !_state_changed && i < num_ecs_species; i++) {
                 if (ecs_states_for_reaction[i] > 0) {
                   double delta = std::abs((ecs_states_for_reaction[i] -
@@ -167,7 +167,7 @@ class ReactionStateCache {
             }
 
             // check if ECS params changed
-            std::cout << "check ECS parameters, _state_changed" << _state_changed << std::endl;
+            // std::cout << "check ECS parameters, _state_changed" << _state_changed << std::endl;
             for (int i = 0; !_state_changed && i < num_ecs_params; i++) {
                 if (ecs_params_for_reaction[i] != 0) {
                     double delta = std::abs((ecs_params_for_reaction[i] -
@@ -189,7 +189,7 @@ class ReactionStateCache {
             }
 
             // temp, for development (remember to also remove iostream import )
-            if ((cache_misses + cache_hits) % 10000) {
+            if ((cache_misses + cache_hits) % 10000 == 0) {
                 std::cout << "[RXD CACHE] #HITS = " << cache_hits
                           << " #MISSES = " << cache_misses << std::endl;
             }
@@ -205,15 +205,12 @@ class ReactionStateCache {
 
         void free_cache(){
             for (int i=0; i < num_species; i++){
-                std::cout << "loop 1 [" << i << "]" << std::endl;
-                std::cout << states_for_reaction[i] << std::endl;
                 free(states_for_reaction[i]);
             }
 
             free(states_for_reaction);
 
             for (int i=0; i < num_params; i++){
-                std::cout << "loop 2" << std::endl;
                 free(params_for_reaction[i]);
             }
 
