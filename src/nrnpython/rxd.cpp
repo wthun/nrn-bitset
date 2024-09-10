@@ -881,6 +881,9 @@ extern "C" NRN_EXPORT void register_rate(int nspecies,
     react->num_mult = nmult;
     react->icsN = 0;
     react->ecsN = 0;
+    react->cache = nullptr;
+    react->cached_jacobian = nullptr;
+    
     if (vptrs != NULL) {
         react->vptrs = (double**) malloc(nseg * sizeof(double*));
         for (i = 0; i < nseg; i++)
