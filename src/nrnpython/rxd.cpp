@@ -871,6 +871,7 @@ extern "C" NRN_EXPORT void register_rate(int nspecies,
     Grid_node* g;
     ECS_Grid_node* grid;
     ICSReactions* react = (ICSReactions*) malloc(sizeof(ICSReactions));
+    memset(react, 0, sizeof(ICSReactions)); // Clear memory
     react->reaction = f;
     react->num_species = nspecies;
     react->num_regions = nregions;
