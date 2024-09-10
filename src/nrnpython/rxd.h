@@ -47,14 +47,6 @@ typedef struct SpeciesIndexList {
 class ReactionStateCache {
 
     public:
-        //ReactionStateCache(){
-        //    std::cout << "At initialization, cache holds: " << std::endl;
-        //    std::cout << "\tnum_params = " << num_params << std::endl;
-        //    std::cout << "\tnum_species = " << num_species << std::endl;
-        //    std::cout << "\tnum_ecs_params = " << num_ecs_params << std::endl;
-        //    std::cout << "\tnum_ecs_params = " << num_ecs_params << std::endl;
-        //    std::cout << "\tnum_regions = " << num_regions << std::endl;
-        //}
         bool is_allocated = false;
         bool is_assigned = false;
 
@@ -83,7 +75,6 @@ class ReactionStateCache {
         void save_state(double **states_for_reaction, double **params_for_reaction,
                         double *ecs_states_for_reaction,
                         double *ecs_params_for_reaction) {
-            std::cout << "save_state " << std::endl;
 
           for (int i = 0; i < num_species; i++) {
             memcpy(this->states_for_reaction[i], states_for_reaction[i],
@@ -109,12 +100,11 @@ class ReactionStateCache {
                            double **new_params_for_reaction,
                            double *new_ecs_states_for_reaction,
                            double *new_ecs_params_for_reaction) {
-            std::cout << "state_changed " << std::endl;
 
             bool _state_changed = false;
 	    
             if(!this->is_allocated){
-                std::cout << "Not allocated... returning true" << std::endl;
+		cache_misses++;
                 return true;
             }
 
@@ -122,8 +112,6 @@ class ReactionStateCache {
             std::cout << "check ICS species, _state_changed=" << _state_changed << ", num_species=" << num_species << ", num_regions=" << num_regions << std::endl;
             for (int i = 0; !_state_changed && i < num_species; i++) {
                 for (int j = 0; !_state_changed && j < num_regions; j++) {
-		  std::cout << "i=" << i << ", j=" << j << ", states_for_reaction=" << states_for_reaction[i][j] << std::endl;
-		  
                   if (states_for_reaction[i][j] > 0) {
                     double delta = std::abs((states_for_reaction[i][j] -
                                              new_states_for_reaction[i][j]) /
@@ -136,14 +124,10 @@ class ReactionStateCache {
 		    std::cout << std::endl;
 		    
                   } else if (new_states_for_reaction[i][j] > 0) {
-		    std::cout << "new_state_for_reaction > 0";
                     _state_changed = true;
                     // todo: deal with negative values?
                     // (e.g. if new species are added after simulation)
                   }
-		  else {
-		    std::cout << "new_state_for_reaction = " << new_states_for_reaction[i][j] << std::endl;
-		  }
                 }
             }
 
@@ -220,37 +204,23 @@ class ReactionStateCache {
         }
 
         void free_cache(){
-            std::cout << "free_cache" << std::endl;
-            std::cout << "\tnum_params = " << num_params << std::endl;
-            std::cout << "\tnum_species = " << num_species << std::endl;
-            std::cout << "\tnum_ecs_params = " << num_ecs_params << std::endl;
-            std::cout << "\tnum_ecs_params = " << num_ecs_params << std::endl;
-            std::cout << "\tnum_regions = " << num_regions << std::endl;
-
-
-            std::cout << "freeing states_for_reaction " << std::endl;
             for (int i=0; i < num_species; i++){
                 std::cout << "loop 1 [" << i << "]" << std::endl;
                 std::cout << states_for_reaction[i] << std::endl;
                 free(states_for_reaction[i]);
             }
-            std::cout << "states_for_reaction" << states_for_reaction << std::endl;
+
             free(states_for_reaction);
 
-            std::cout << "num_params" << std::endl;
             for (int i=0; i < num_params; i++){
                 std::cout << "loop 2" << std::endl;
                 free(params_for_reaction[i]);
             }
-            std::cout << "params_for_reaction" << std::endl;
-            free(params_for_reaction);
 
-            std::cout << "ecs_states_for_reaction" << std::endl;
+            free(params_for_reaction);
             free(ecs_states_for_reaction);
-            std::cout << "ecs_params_for_reaction" << std::endl;
             free(ecs_params_for_reaction);
 
-            std::cout << "NULL assignment" << std::endl;
             states_for_reaction = NULL;
             params_for_reaction = NULL;
             ecs_states_for_reaction = NULL;
