@@ -64,7 +64,7 @@ class ReactionStateCache {
 
         int num_regions = 0;
 
-        double delta_threshold = 1e-5; 
+        double delta_threshold = 1e-2; 
 
         // count cache hits
         long cache_hits = 0;
