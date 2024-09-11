@@ -1573,9 +1573,6 @@ void solve_reaction(ICSReactions* react,
     double pd;
     double dt = *dt_ptr;
     double dx = FLT_EPSILON;
-    
-    // auto jacobian = std::make_unique<OcFullMatrix>(N, N);
-    auto& jacobian = react->cached_jacobian; // alias for brevity
 
     auto b = std::make_unique<IvocVect>(N);
     auto x = std::make_unique<IvocVect>(N);
@@ -1695,28 +1692,30 @@ void solve_reaction(ICSReactions* react,
 
         bool state_changed = false;
         
-        if (!react->cache) {
+        if (!react->cache_list[segment]) {
 
-            react->cache = std::make_unique<ReactionStateCache>();
+            react->cache_list[segment] = std::make_unique<ReactionStateCache>();
 	    std::cout << "Creating cache " << react->cache.get() << " for react " << react << " n_seg: " << react->num_segments << " n_reg: " << react->num_regions << " icsN: " << react->icsN <<"\n";
 	    
         }
 
-        if (react->cache->state_changed(states_for_reaction, params_for_reaction,
+        auto& jacobian = react->cache_list[segment]->cached_jacobian;
+
+        if (react->cache_list[segment]->state_changed(states_for_reaction, params_for_reaction,
                                        ecs_states_for_reaction,
                                        ecs_params_for_reaction)) {
             
-            if (!react->cache->is_allocated) {
-                react->cache->allocate( react->num_params, 
-                                        react->num_species,
-                                        react->num_ecs_species, 
-                                        react->num_ecs_params,
-                                        react->num_regions);
+            if (!react->cache_list[segment]->is_allocated) {
+                react->cache_list[segment]->allocate( react->num_params, 
+                                                      react->num_species,
+                                                      react->num_ecs_species, 
+                                                      react->num_ecs_params,
+                                                      react->num_regions);
             }
 
-            react->cache->save_state(states_for_reaction, params_for_reaction,
-                                    ecs_states_for_reaction,
-                                    ecs_params_for_reaction);
+            react->cache_list[segment]->save_state(states_for_reaction, params_for_reaction,
+                                                   ecs_states_for_reaction,
+                                                   ecs_params_for_reaction);
 
             state_changed = true;
 
@@ -1724,7 +1723,7 @@ void solve_reaction(ICSReactions* react,
 
         nrn::Instrumentor::phase_end("check state cache");
 
-        if (!react->cached_jacobian || state_changed) { // Should the jacobian be recalculated?
+        if (!react->cache_list[segment]->cached_jacobian || state_changed) { // Should the jacobian be recalculated?
 
             nrn::Instrumentor::phase_begin("allocate N x N matrix for jacobian");
             react->cached_jacobian = std::make_unique<OcFullMatrix>(N, N);
