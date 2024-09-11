@@ -10,6 +10,7 @@
 #include <../nrnoc/multicore.h>
 #include "nrnwrap_Python.h"
 #include "nrnpython.h"
+#include <memory>
 
 #include <thread>
 #include <vector>

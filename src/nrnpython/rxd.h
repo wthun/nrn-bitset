@@ -1,10 +1,10 @@
 #pragma once
-#include <algorithm>
 #include <condition_variable>
 #include <mutex>
 #include <thread>
 #include <vector>
 #include <cmath>
+#include <memory>
 
 // TEMP, for debugging
 #include <iostream>
