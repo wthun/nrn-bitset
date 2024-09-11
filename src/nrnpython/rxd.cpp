@@ -1697,7 +1697,10 @@ void solve_reaction(ICSReactions* react,
         bool state_changed = false;
         
         if (!react->cache) {
+
             react->cache = std::make_unique<ReactionStateCache>();
+	    std::cout << "Creating cache " << react->cache.get() << " for react " << react << " n_seg: " << react->num_segments << " n_reg: " << react->num_regions << " icsN: " << react->icsN <<"\n";
+	    
         }
 
         if (react->cache->state_changed(states_for_reaction, params_for_reaction,
@@ -1726,6 +1729,7 @@ void solve_reaction(ICSReactions* react,
 
             nrn::Instrumentor::phase_begin("allocate N x N matrix for jacobian");
             react->cached_jacobian = std::make_unique<OcFullMatrix>(N, N);
+            // react->cached_jacobian = std::make_unique<OcSparseMatrix>(N, N);	    
             nrn::Instrumentor::phase_end("allocate N x N matrix for jacobian");
 
             /*Calculate I - Jacobian for ICS reactions*/

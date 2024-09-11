@@ -189,9 +189,9 @@ class ReactionStateCache {
             }
 
             // temp, for development (remember to also remove iostream import )
-            if ((cache_misses + cache_hits) % 10000 == 0) {
-                std::cout << "[RXD CACHE] #HITS = " << cache_hits
-                          << " #MISSES = " << cache_misses << std::endl;
+            if ((cache_misses + cache_hits) % 100 == 0) {
+	      std::cout << "Adr: " << this << " [RXD CACHE] #HITS = " << cache_hits
+                          << " #MISSES = " << cache_misses << "\n";
             }
 
             is_assigned = true;
@@ -268,6 +268,7 @@ typedef struct ICSReactions {
     // old_state (?) to check for updates.
     // also track cache hits and misses
     std::unique_ptr<OcFullMatrix> cached_jacobian = nullptr;
+  // std::unique_ptr<OcSparseMatrix> cached_jacobian = nullptr;  
 
     std::unique_ptr<ReactionStateCache> cache = nullptr;
     
