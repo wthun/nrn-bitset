@@ -1695,8 +1695,11 @@ void solve_reaction(ICSReactions* react,
         if (!react->cache_list[segment]) {
 
             react->cache_list[segment] = std::make_unique<ReactionStateCache>();
-	    std::cout << "Creating cache " << react->cache.get() << " for react " << react << " n_seg: " << react->num_segments << " n_reg: " << react->num_regions << " icsN: " << react->icsN <<"\n";
-	    
+            std::cout << "Creating cache " << react->cache_list[segment].get()
+                      << " for react " << react
+                      << " n_seg: " << react->num_segments
+                      << " n_reg: " << react->num_regions
+                      << " icsN: " << react->icsN << "\n";
         }
 
         auto& jacobian = react->cache_list[segment]->cached_jacobian;
@@ -1726,7 +1729,7 @@ void solve_reaction(ICSReactions* react,
         if (!react->cache_list[segment]->cached_jacobian || state_changed) { // Should the jacobian be recalculated?
 
             nrn::Instrumentor::phase_begin("allocate N x N matrix for jacobian");
-            react->cached_jacobian = std::make_unique<OcFullMatrix>(N, N);
+            react->cache_list[segment]->cached_jacobian = std::make_unique<OcFullMatrix>(N, N);
             // react->cached_jacobian = std::make_unique<OcSparseMatrix>(N, N);	    
             nrn::Instrumentor::phase_end("allocate N x N matrix for jacobian");
 
