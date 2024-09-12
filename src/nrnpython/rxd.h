@@ -218,10 +218,14 @@ class ReactionStateCache {
         }
 
         void free_cache(){
+	  if (states_for_reaction) {
             free(states_for_reaction[0]);
-            free(states_for_reaction);
+	  }
+	  free(states_for_reaction);
 
+	  if (params_for_reaction) {
             free(params_for_reaction[0]);
+	  }
             free(params_for_reaction);
 
             free(ecs_states_for_reaction);
