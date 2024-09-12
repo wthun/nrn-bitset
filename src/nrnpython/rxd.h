@@ -49,7 +49,7 @@ class ReactionStateCache {
 
     public:
         unsigned int update_request_ctr = 0; // overflows to 0
-        unsigned int update_frequency = 100; 
+        unsigned int update_frequency = 20; 
 
         bool is_allocated = false;
         bool is_assigned = false;
