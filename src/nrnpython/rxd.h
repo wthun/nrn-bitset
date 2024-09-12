@@ -48,6 +48,9 @@ typedef struct SpeciesIndexList {
 class ReactionStateCache {
 
     public:
+        unsigned int update_request_ctr = 0; // overflows to 0
+        unsigned int update_frequency = 100; 
+
         bool is_allocated = false;
         bool is_assigned = false;
 
@@ -103,14 +106,23 @@ class ReactionStateCache {
                            double **new_params_for_reaction,
                            double *new_ecs_states_for_reaction,
                            double *new_ecs_params_for_reaction) {
+            return update_request_ctr++ % update_frequency == 0;
+        }
+
+        bool state_changed_old(double **new_states_for_reaction,
+                           double **new_params_for_reaction,
+                           double *new_ecs_states_for_reaction,
+                           double *new_ecs_params_for_reaction) {
 
             bool _state_changed = false;
-	    
-            if(!this->is_allocated){
-		cache_misses++;
+	        
+            
+
+            if (!this->is_allocated) {
+                cache_misses++;
                 return true;
             }
-
+            
             // check if (ICS) species states have changed
             // std::cout << "check ICS species, _state_changed=" << _state_changed << ", num_species=" << num_species << ", num_regions=" << num_regions << std::endl;
             for (int i = 0; !_state_changed && i < num_species; i++) {
@@ -122,9 +134,7 @@ class ReactionStateCache {
 		    // std::cout << "delta (" << i << "," << j << ")= " << delta;
                     if (delta > delta_threshold) {
                         _state_changed = true;
-			// std::cout << " changed.";
                     }
-		    // std::cout << std::endl;
 		    
                   } else if (new_states_for_reaction[i][j] > 0) {
                     _state_changed = true;
