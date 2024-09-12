@@ -12,6 +12,8 @@
 
 #include "ocmatrix.h"
 
+#include <iostream>
+
 int nrn_matrix_dim(void* vm, int d) {
     OcMatrix* m = (OcMatrix*) vm;
     return d ? m->ncol() : m->nrow();
