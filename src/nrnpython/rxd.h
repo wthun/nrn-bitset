@@ -73,7 +73,8 @@ class ReactionStateCache {
         long cache_hits = 0;
         long cache_misses = 0;
 
-        std::unique_ptr<OcSparseMatrix> cached_jacobian = nullptr;
+  // std::unique_ptr<OcSparseMatrix> cached_jacobian = nullptr;
+        std::unique_ptr<OcFullMatrix> cached_jacobian = nullptr;
 
         void allocate(int num_params, int num_species, int num_ecs_species,
                       int num_ecs_params, int num_regions);

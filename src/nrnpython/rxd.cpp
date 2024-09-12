@@ -1737,7 +1737,8 @@ void solve_reaction(ICSReactions* react,
 
             nrn::Instrumentor::phase_begin("allocate N x N matrix for jacobian");
 	    if (!react->cache_list[segment]->cached_jacobian) {
-	      react->cache_list[segment]->cached_jacobian = std::make_unique<OcSparseMatrix>(N, N);
+	      // react->cache_list[segment]->cached_jacobian = std::make_unique<OcSparseMatrix>(N, N);
+	      react->cache_list[segment]->cached_jacobian = std::make_unique<OcFullMatrix>(N, N);	      
 	    }
 	    else {
 	      react->cache_list[segment]->cached_jacobian->zero();
