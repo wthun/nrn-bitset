@@ -883,7 +883,7 @@ extern "C" NRN_EXPORT void register_rate(int nspecies,
     react->num_mult = nmult;
     react->icsN = 0;
     react->ecsN = 0;
-    react->cache_list.reserve(nseg); // default initializes to a nullptr
+    react->cache_list.resize(nseg); // default initializes to a nullptr
     
     if (vptrs != NULL) {
         react->vptrs = (double**) malloc(nseg * sizeof(double*));
@@ -1692,7 +1692,7 @@ void solve_reaction(ICSReactions* react,
         nrn::Instrumentor::phase_begin("check state cache");
 
         bool state_changed = false;
-        
+
         if (!react->cache_list[segment]) {
 
             react->cache_list[segment] = std::make_unique<ReactionStateCache>();

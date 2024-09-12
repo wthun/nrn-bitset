@@ -67,7 +67,7 @@ class ReactionStateCache {
 
         int num_regions = 0;
 
-        double delta_threshold = 1e-5; 
+        double delta_threshold = 1e-2; 
 
         // count cache hits
         long cache_hits = 0;
@@ -202,7 +202,7 @@ class ReactionStateCache {
             }
 
             // temp, for development (remember to also remove iostream import )
-            if ((cache_misses + cache_hits) % 100 == 0) {
+            if ((cache_misses + cache_hits) % 10000 == 0) {
 	      std::cout << "Adr: " << this << " [RXD CACHE] #HITS = " << cache_hits
                           << " #MISSES = " << cache_misses << "\n";
             }
