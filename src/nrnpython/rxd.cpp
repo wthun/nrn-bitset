@@ -1531,15 +1531,17 @@ void ReactionStateCache::allocate(int num_params, int num_species,
     // NB: can malloc(0) occur here? (Implementation defined behavior)
     // contiguous memory
     states_for_reaction = (double **)malloc(num_species * sizeof(double *));
-    states_for_reaction[0] = malloc(num_species * num_regions * sizeof(double));
-    for (int i = 1; i < num_species; i++){
-        states_for_reaction[i] = states_for_reaction[i-1] + num_regions;
+    states_for_reaction[0] =
+        (double *)malloc(num_species * num_regions * sizeof(double));
+    for (int i = 1; i < num_species; i++) {
+        states_for_reaction[i] = states_for_reaction[i - 1] + num_regions;
     }
 
     params_for_reaction = (double **)malloc(num_params * sizeof(double *));
-    params_for_reaction[0] = malloc(num_params * num_regions * sizeof(double));
+    params_for_reaction[0] =
+        (double *)malloc(num_params * num_regions * sizeof(double));
     for (int i = 1; i < num_params; i++) {
-        params_for_reaction[i] = params_for_reaction[i-1] + num_regions;
+        params_for_reaction[i] = params_for_reaction[i - 1] + num_regions;
     }
 
     if (num_ecs_species > 0) {
