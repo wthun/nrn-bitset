@@ -12,7 +12,7 @@
 
 #include "ocmatrix.h"
 
-#include <iostream>
+#include <iostream> // temp, for debugging
 
 int nrn_matrix_dim(void* vm, int d) {
     OcMatrix* m = (OcMatrix*) vm;
