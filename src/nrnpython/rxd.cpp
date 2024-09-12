@@ -1761,14 +1761,17 @@ void solve_reaction(ICSReactions* react,
                                         ecs_result_dx,
                                         NULL,
                                         v);
-
+			
                         for (jac_i = 0, jac_idx = 0; jac_i < react->num_species; jac_i++) {
                             for (jac_j = 0; jac_j < react->num_regions; jac_j++) {
                                 // pd is our Jacobian approximated
                                 if (react->state_idx[segment][jac_i][jac_j] != SPECIES_ABSENT) {
                                     pd = (result_array_dx[jac_i][jac_j] - result_array[jac_i][jac_j]) /
                                          dx;
+				    nrn::Instrumentor::phase_begin("ICS Jacobian mep 1");
                                     *jacobian->mep(jac_idx, idx) = (idx == jac_idx) - dt * pd;
+				    nrn::Instrumentor::phase_end("ICS Jacobian mep 1");
+											    
                                     jac_idx += 1;
                                 }
                                 result_array_dx[jac_i][jac_j] = 0;
@@ -1778,7 +1781,10 @@ void solve_reaction(ICSReactions* react,
                             // pd is our Jacobian approximated
                             if (react->ecs_state[segment][jac_i] != NULL) {
                                 pd = (ecs_result_dx[jac_i] - ecs_result[jac_i]) / dx;
+				nrn::Instrumentor::phase_begin("ICS Jacobian mep 2");
                                 *jacobian->mep(jac_idx, idx) = -dt * pd;
+				nrn::Instrumentor::phase_end("ICS Jacobian mep 2");
+
                                 jac_idx += 1;
                             }
                             ecs_result_dx[jac_i] = 0;
