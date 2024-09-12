@@ -221,7 +221,6 @@ void OcFullMatrix::inverse(Matrix* out) {
 
 void OcFullMatrix::solv(Vect* in, Vect* out, bool use_lu) {
     if (!lu_ || !use_lu || lu_->rows() != m_.rows()) {
-        std::cout << "["<<this<<"] OcFullMatrix updates...\n";
         lu_ = std::make_unique<Eigen::FullPivLU<decltype(m_)>>(m_);
     }
     auto v1 = Vect2VEC(in);
@@ -251,7 +250,7 @@ OcSparseMatrix::OcSparseMatrix(int nrow, int ncol)
     : OcMatrix(MSPARSE)
     , m_(nrow, ncol) {}
 
-double* OcSparseMatrix::mep(int i, int j) {
+inline double* OcSparseMatrix::mep(int i, int j) {
     return &m_.coeffRef(i, j);
 }
 
@@ -283,7 +282,6 @@ void OcSparseMatrix::mulv(Vect* vin, Vect* vout) {
 
 void OcSparseMatrix::solv(Vect* in, Vect* out, bool use_lu) {
     if (!lu_ || !use_lu || lu_->rows() != m_.rows()) {
-        std::cout << "["<<this<<"] OcSparseMatrix updates...\n"; 
         m_.makeCompressed();
         lu_ = std::make_unique<Eigen::SparseLU<decltype(m_)>>(m_);
     }

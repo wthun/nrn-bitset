@@ -1730,7 +1730,13 @@ void solve_reaction(ICSReactions* react,
         if (!react->cache_list[segment]->cached_jacobian || state_changed) { // Should the jacobian be recalculated?
 
             nrn::Instrumentor::phase_begin("allocate N x N matrix for jacobian");
-            react->cache_list[segment]->cached_jacobian = std::make_unique<OcSparseMatrix>(N, N);
+	    if (!react->cache_list[segment]->cached_jacobian) {
+	      react->cache_list[segment]->cached_jacobian = std::make_unique<OcSparseMatrix>(N, N);
+	    }
+	    else {
+	      react->cache_list[segment]->cached_jacobian->zero();
+	    }
+	    
             // react->cached_jacobian = std::make_unique<OcSparseMatrix>(N, N);	    
             nrn::Instrumentor::phase_end("allocate N x N matrix for jacobian");
 
@@ -1768,10 +1774,7 @@ void solve_reaction(ICSReactions* react,
                                 if (react->state_idx[segment][jac_i][jac_j] != SPECIES_ABSENT) {
                                     pd = (result_array_dx[jac_i][jac_j] - result_array[jac_i][jac_j]) /
                                          dx;
-				    nrn::Instrumentor::phase_begin("ICS Jacobian mep 1");
                                     *jacobian->mep(jac_idx, idx) = (idx == jac_idx) - dt * pd;
-				    nrn::Instrumentor::phase_end("ICS Jacobian mep 1");
-											    
                                     jac_idx += 1;
                                 }
                                 result_array_dx[jac_i][jac_j] = 0;
@@ -1781,10 +1784,7 @@ void solve_reaction(ICSReactions* react,
                             // pd is our Jacobian approximated
                             if (react->ecs_state[segment][jac_i] != NULL) {
                                 pd = (ecs_result_dx[jac_i] - ecs_result[jac_i]) / dx;
-				nrn::Instrumentor::phase_begin("ICS Jacobian mep 2");
                                 *jacobian->mep(jac_idx, idx) = -dt * pd;
-				nrn::Instrumentor::phase_end("ICS Jacobian mep 2");
-
                                 jac_idx += 1;
                             }
                             ecs_result_dx[jac_i] = 0;
