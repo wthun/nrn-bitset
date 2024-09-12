@@ -115,7 +115,7 @@ class ReactionStateCache {
                            double *new_ecs_params_for_reaction) {
 
             bool _state_changed = false;
-	        
+            
             
 
             if (!this->is_allocated) {
@@ -131,11 +131,11 @@ class ReactionStateCache {
                     double delta = std::abs((states_for_reaction[i][j] -
                                              new_states_for_reaction[i][j]) /
                                             states_for_reaction[i][j]);
-		    // std::cout << "delta (" << i << "," << j << ")= " << delta;
+            // std::cout << "delta (" << i << "," << j << ")= " << delta;
                     if (delta > delta_threshold) {
                         _state_changed = true;
                     }
-		    
+            
                   } else if (new_states_for_reaction[i][j] > 0) {
                     _state_changed = true;
                     // todo: deal with negative values?
@@ -203,7 +203,8 @@ class ReactionStateCache {
 
             // temp, for development (remember to also remove iostream import )
             if ((cache_misses + cache_hits) % 10000 == 0) {
-	      std::cout << "Adr: " << this << " [RXD CACHE] #HITS = " << cache_hits
+                std::cout << "Adr: " << this
+                          << " [RXD CACHE] #HITS = " << cache_hits
                           << " #MISSES = " << cache_misses << "\n";
             }
 
@@ -217,33 +218,28 @@ class ReactionStateCache {
         }
 
         void free_cache(){
-            for (int i=0; i < num_species; i++){
-                free(states_for_reaction[i]);
-            }
-
+            free(states_for_reaction[0]);
             free(states_for_reaction);
 
-            for (int i=0; i < num_params; i++){
-                free(params_for_reaction[i]);
-            }
-
+            free(params_for_reaction[0]);
             free(params_for_reaction);
+
             free(ecs_states_for_reaction);
             free(ecs_params_for_reaction);
 
             states_for_reaction = NULL;
             params_for_reaction = NULL;
+
             ecs_states_for_reaction = NULL;
             ecs_params_for_reaction = NULL;
 
-	    num_params = 0;
-	    num_species = 0;
-	    num_ecs_species = 0;
-	    num_ecs_params = 0;
-	    num_regions = 0;
-    	    
-            is_allocated = false;
+            num_params = 0;
+            num_species = 0;
+            num_ecs_species = 0;
+            num_ecs_params = 0;
+            num_regions = 0;
 
+            is_allocated = false;
         }
 
         ~ReactionStateCache(){
